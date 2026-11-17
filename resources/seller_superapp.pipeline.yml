@@ -1,0 +1,22 @@
+# Lakeflow Spark Declarative Pipeline: raw/v2 files -> bronze_* -> silver_* -> gold_* (Task 3).
+resources:
+  pipelines:
+    seller_superapp_pipeline:
+      name: seller_superapp_pipeline
+      catalog: ${var.catalog}
+      # Reference the schema resource so the pipeline is created after it.
+      schema: ${resources.schemas.seller_superapp.name}
+      serverless: true
+      continuous: false
+      photon: true
+      channel: CURRENT
+      configuration:
+        # Only the v2 dataset (ruling R10); _eval/ and _manifest/ are never read.
+        raw_root: /Volumes/${var.catalog}/${var.schema}/${var.volume}/v2
+      libraries:
+        - file:
+            path: ../src/pipeline/bronze.sql
+        - file:
+            path: ../src/pipeline/silver.sql
+        - file:
+            path: ../src/pipeline/gold.sql

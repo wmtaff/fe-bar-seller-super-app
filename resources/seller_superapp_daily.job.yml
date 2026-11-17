@@ -43,3 +43,10 @@ resources:
               - "{{job.parameters.dataset_version}}"
               - --src-dir
               - ${workspace.file_path}/src
+        # Task 3: refresh the bronze -> silver -> gold pipeline after new raw files land.
+        - task_key: pipeline_refresh
+          depends_on:
+            - task_key: generate_data
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.seller_superapp_pipeline.id}
+            full_refresh: false
