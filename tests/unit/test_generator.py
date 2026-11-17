@@ -1,0 +1,318 @@
+"""Unit tests for the synthetic Fleetwise data generator (Task 2)."""
+
+import csv
+import hashlib
+import json
+from pathlib import Path
+
+import pytest
+
+from fleetwise_gen import generate
+from fleetwise_gen.config import AS_OF, CURRENT_FQ_END, CURRENT_FQ_START
+
+SEED = 42
+SF_OBJECTS = ["User", "UserRole", "Account", "Contact", "Opportunity",
+              "OpportunityHistory", "Lead", "Task", "Event"]
+
+
+# ---------- helpers ----------
+def read_jsonl(path: Path) -> list[dict]:
+    with path.open() as f:
+        return [json.loads(line) for line in f if line.strip()]
+
+
+def sf(out: Path, obj: str, batch: int = 0) -> list[dict]:
+    p = out / "salesforce" / obj / f"batch={batch:04d}" / "part-0.json"
+    return read_jsonl(p) if p.exists() else []
+
+
+def transcripts(out: Path, batch: int = 0) -> list[dict]:
+    d = out / "meet_transcripts" / f"batch={batch:04d}"
+    return [json.loads(p.read_text()) for p in sorted(d.glob("*.json"))]
+
+
+def truth(out: Path, batch: int = 0) -> list[dict]:
+    return read_jsonl(out / "_eval" / "truth" / f"batch={batch:04d}" / "part-0.json")
+
+
+def tree_hashes(root: Path, include_manifest: bool = False) -> dict[str, str]:
+    out = {}
+    for p in sorted(root.rglob("*")):
+        if not p.is_file():
+            continue
+        rel = p.relative_to(root).as_posix()
+        if rel.startswith("_manifest/") and not include_manifest:
+            continue
+        out[rel] = hashlib.sha256(p.read_bytes()).hexdigest()
+    return out
+
+
+def jordan(out: Path) -> dict:
+    return next(u for u in sf(out, "User") if u["Name"] == "Jordan Rivera")
+
+
+# ---------- fixtures ----------
+@pytest.fixture(scope="session")
+def init_dir(tmp_path_factory) -> Path:
+    out = tmp_path_factory.mktemp("init")
+    generate("init", out, SEED, 0)
+    return out
+
+
+@pytest.fixture(scope="session")
+def inc_dir(tmp_path_factory) -> Path:
+    out = tmp_path_factory.mktemp("inc")
+    generate("increment", out, SEED, 1)
+    return out
+
+
+# ---------- tests ----------
+def test_init_counts_and_layout(init_dir):
+    counts = json.loads((init_dir / "_manifest" / "batch=0000.json").read_text())["counts"]
+    for obj in SF_OBJECTS:
+        assert (init_dir / "salesforce" / obj / "batch=0000" / "part-0.json").exists(), obj
+    assert (init_dir / "product_usage" / "batch=0000" / "part-0.csv").exists()
+    assert (init_dir / "support_tickets" / "batch=0000" / "part-0.json").exists()
+    assert 640 <= counts["User"] <= 700
+    assert counts["Account"] == 5000
+    assert counts["Contact"] == 20000
+    assert counts["Opportunity"] == 15000
+    assert counts["Lead"] == 4000
+    assert 55000 <= counts["Task"] + counts["Event"] <= 65000
+    assert counts["meet_transcripts"] == 600
+    assert counts["support_tickets"] == 8000
+    opps = sf(init_dir, "Opportunity")
+    assert 2900 <= sum(not o["IsClosed"] for o in opps) <= 3100
+
+
+def test_init_is_deterministic(init_dir, tmp_path):
+    generate("init", tmp_path, SEED, 0)
+    a, b = tree_hashes(init_dir), tree_hashes(tmp_path)
+    assert a and a == b
+
+
+def test_manifest_written(init_dir):
+    m = json.loads((init_dir / "_manifest" / "batch=0000.json").read_text())
+    assert m["batch"] == 0 and m["mode"] == "init"
+    assert m["landed_at"].endswith("Z")
+    assert m["counts"]["Opportunity"] == 15000
+
+
+def test_ids_are_18_char_and_unique(init_dir):
+    seen = set()
+    for obj in SF_OBJECTS:
+        ids = [r["Id"] for r in sf(init_dir, obj)]
+        assert ids, obj
+        assert all(isinstance(i, str) and len(i) == 18 and i.isalnum() for i in ids), obj
+        assert len(set(ids)) == len(ids), obj
+        assert not (seen & set(ids)), obj
+        seen |= set(ids)
+    meetings = [t["meeting_id"] for t in transcripts(init_dir)]
+    assert len(set(meetings)) == len(meetings) == 600
+
+
+def test_referential_integrity(init_dir):
+    users = {u["Id"] for u in sf(init_dir, "User")}
+    roles = {r["Id"] for r in sf(init_dir, "UserRole")}
+    accounts = {a["Id"] for a in sf(init_dir, "Account")}
+    contacts = {c["Id"]: c for c in sf(init_dir, "Contact")}
+    opps = {o["Id"]: o for o in sf(init_dir, "Opportunity")}
+    for u in sf(init_dir, "User"):
+        assert u["UserRoleId"] in roles
+        assert u["ManagerId"] is None or u["ManagerId"] in users
+    for o in opps.values():
+        assert o["AccountId"] in accounts and o["OwnerId"] in users
+    for c in contacts.values():
+        assert c["AccountId"] in accounts
+    for h in sf(init_dir, "OpportunityHistory"):
+        assert h["OpportunityId"] in opps
+    for obj in ("Task", "Event"):
+        for a in sf(init_dir, obj):
+            assert a["OwnerId"] in users
+            assert a["WhatId"] is None or a["WhatId"] in opps
+            assert a["WhoId"] is None or a["WhoId"] in contacts
+    emails = {c["Email"] for c in contacts.values()}
+    for t in transcripts(init_dir):
+        assert t["opportunity_id"] in opps
+        assert opps[t["opportunity_id"]]["AccountId"] == t["account_id"]
+        cust = [a for a in t["attendees"] if a["company"] != "Fleetwise"]
+        assert cust and all(a["email"] in emails for a in cust)
+        speakers = {a["name"] for a in t["attendees"]}
+        assert all(turn["speaker"] in speakers for turn in t["turns"])
+    with (init_dir / "product_usage" / "batch=0000" / "part-0.csv").open() as f:
+        assert all(r["account_id"] in accounts for r in csv.DictReader(f))
+    for tk in read_jsonl(init_dir / "support_tickets" / "batch=0000" / "part-0.json"):
+        assert tk["account_id"] in accounts
+    records = set(opps) | {l["Id"] for l in sf(init_dir, "Lead")} | {
+        t["meeting_id"] for t in transcripts(init_dir)}
+    assert all(t["record_id"] in records for t in truth(init_dir))
+
+
+def test_truth_not_in_raw(init_dir):
+    banned = ("true_intent", "will_win", "planted_")
+    for p in init_dir.rglob("*"):
+        rel = p.relative_to(init_dir).as_posix()
+        if p.is_file() and not rel.startswith("_eval/"):
+            text = p.read_text()
+            assert not any(b in text for b in banned), rel
+
+
+def test_truth_shape(init_dir):
+    rows = truth(init_dir)
+    kinds = {r["record_type"] for r in rows}
+    assert {"Opportunity", "Lead", "Transcript"} <= kinds
+    for r in rows:
+        assert {"record_type", "record_id", "true_intent", "planted_competitors",
+                "planted_next_steps", "will_win", "snapshot_date"} <= set(r)
+        assert 0.0 <= r["true_intent"] <= 1.0
+        assert isinstance(r["will_win"], bool)
+        assert set(r["planted_competitors"]) <= {"RoadLynx", "FleetCore", "Trackwell"}
+    assert any(r["planted_next_steps"] for r in rows if r["record_type"] == "Transcript")
+
+
+def test_closed_opp_snapshot_mid_lifecycle(init_dir):
+    opps = {o["Id"]: o for o in sf(init_dir, "Opportunity")}
+    tr = {t["record_id"]: t for t in truth(init_dir) if t["record_type"] == "Opportunity"}
+    closed = [o for o in opps.values() if o["IsClosed"]]
+    for o in closed[:500]:
+        snap = tr[o["Id"]]["snapshot_date"]
+        assert o["CreatedDate"][:10] < snap < o["CloseDate"] or o["CreatedDate"][:10] == snap
+    # transcripts on closed opps fall both before and after the snapshot
+    before = after = 0
+    for t in transcripts(init_dir):
+        o = opps[t["opportunity_id"]]
+        if o["IsClosed"]:
+            if t["started_at"][:10] <= tr[o["Id"]]["snapshot_date"]:
+                before += 1
+            else:
+                after += 1
+    assert before > 20 and after > 20
+
+
+def test_jordan_persona(init_dir):
+    j = jordan(init_dir)
+    assert j["Segment__c"] == "Mid-Market" and j["Region__c"] == "West"
+    open_opps = [o for o in sf(init_dir, "Opportunity")
+                 if o["OwnerId"] == j["Id"] and not o["IsClosed"]]
+    assert len(open_opps) >= 25
+    ids = {o["Id"] for o in open_opps}
+    in_q = [o for o in open_opps if CURRENT_FQ_START <= o["CloseDate"] <= CURRENT_FQ_END]
+    assert len(in_q) >= 0.7 * len(open_opps)
+    with_tx = {t["opportunity_id"] for t in transcripts(init_dir) if t["opportunity_id"] in ids}
+    assert len(with_tx) >= 8
+    quotes = set()
+    for t in truth(init_dir):
+        if t["record_type"] == "Transcript":
+            for q in t.get("competitor_quotes", []):
+                if AS_OF < q["expires_on"] <= CURRENT_FQ_END:
+                    quotes.add(t["record_id"])
+    tx_opp = {t["meeting_id"]: t["opportunity_id"] for t in transcripts(init_dir)}
+    assert len({tx_opp[m] for m in quotes if tx_opp[m] in ids}) >= 2
+
+
+def test_morgan_manages_jordan_plus_seven(init_dir):
+    users = sf(init_dir, "User")
+    morgan = next(u for u in users if u["Name"] == "Morgan Lee")
+    reports = [u for u in users if u["ManagerId"] == morgan["Id"]]
+    assert len(reports) == 8
+    assert jordan(init_dir)["Id"] in {u["Id"] for u in reports}
+    assert sum(u["Name"] == "Morgan Lee" for u in users) == 1
+    assert sum(u["Name"] == "Jordan Rivera" for u in users) == 1
+
+
+def test_empty_persona_has_no_open_opps(init_dir):
+    users = sf(init_dir, "User")
+    taylor = next(u for u in users if u["Name"] == "Taylor Empty")
+    assert taylor["Demo_Persona__c"] == "empty-demo"
+    assert not [o for o in sf(init_dir, "Opportunity")
+                if o["OwnerId"] == taylor["Id"] and not o["IsClosed"]]
+
+
+def test_increment_stable_ids(init_dir, inc_dir):
+    init_opps = {o["Id"] for o in sf(init_dir, "Opportunity")}
+    inc_opps = sf(inc_dir, "Opportunity", 1)
+    assert 140 <= len(inc_opps) <= 160
+    assert {o["Id"] for o in inc_opps} <= init_opps
+    assert all(o["LastModifiedDate"] == "2026-11-16T13:00:00.000Z" for o in inc_opps)
+    # accounts / contacts / users never get new IDs in an increment
+    for obj in ("Account", "Contact", "User"):
+        assert {r["Id"] for r in sf(inc_dir, obj, 1)} <= {r["Id"] for r in sf(init_dir, obj)}
+    new_leads = {l["Id"] for l in sf(inc_dir, "Lead", 1)}
+    assert len(new_leads) == 50 and not (new_leads & {l["Id"] for l in sf(init_dir, "Lead")})
+    acts = sf(inc_dir, "Task", 1) + sf(inc_dir, "Event", 1)
+    assert 950 <= len(acts) <= 1050
+    assert all(a["WhatId"] is None or a["WhatId"] in init_opps for a in acts)
+    init_act = {a["Id"] for a in sf(init_dir, "Task") + sf(init_dir, "Event")}
+    assert not ({a["Id"] for a in acts} & init_act)
+    assert len(transcripts(inc_dir, 1)) == 40
+    assert all(t["opportunity_id"] in init_opps for t in transcripts(inc_dir, 1))
+    hist_ids = {h["Id"] for h in sf(init_dir, "OpportunityHistory")}
+    assert not ({h["Id"] for h in sf(inc_dir, "OpportunityHistory", 1)} & hist_ids)
+    with (inc_dir / "product_usage" / "batch=0001" / "part-0.csv").open() as f:
+        days = {r["usage_date"] for r in csv.DictReader(f)}
+    assert days == {"2026-11-17"}
+    tickets = read_jsonl(inc_dir / "support_tickets" / "batch=0001" / "part-0.json")
+    assert len(tickets) == 100
+
+
+def test_increment_ids_independent_of_disk(inc_dir, tmp_path):
+    generate("increment", tmp_path, SEED, 1)
+    assert tree_hashes(inc_dir) == tree_hashes(tmp_path)
+
+
+def test_increment_is_idempotent(inc_dir):
+    before = tree_hashes(inc_dir, include_manifest=True)
+    counts = generate("increment", inc_dir, SEED, 1)
+    assert tree_hashes(inc_dir, include_manifest=True) == before
+    assert counts["Lead"] == 50
+
+
+def test_increment_batches_differ(tmp_path):
+    generate("increment", tmp_path, SEED, 2)
+    b2 = {o["Id"] for o in sf(tmp_path, "Lead", 2)}
+    generate("increment", tmp_path, SEED, 1)
+    b1 = {o["Id"] for o in sf(tmp_path, "Lead", 1)}
+    assert len(b1) == len(b2) == 50 and not (b1 & b2)
+    o2 = sf(tmp_path, "Opportunity", 2)
+    assert all(o["LastModifiedDate"] == "2026-11-16T14:00:00.000Z" for o in o2)
+
+
+def test_win_rate_tracks_intent(init_dir):
+    tr = {t["record_id"]: t["true_intent"] for t in truth(init_dir)
+          if t["record_type"] == "Opportunity"}
+    closed = sorted((tr[o["Id"]], o["IsWon"]) for o in sf(init_dir, "Opportunity") if o["IsClosed"])
+    q = len(closed) // 5
+    bottom = sum(w for _, w in closed[:q]) / q
+    top = sum(w for _, w in closed[-q:]) / q
+    assert top > bottom + 0.3
+
+
+def test_open_close_dates_in_current_and_next_quarter(init_dir):
+    open_opps = [o for o in sf(init_dir, "Opportunity") if not o["IsClosed"]]
+    near = [o for o in open_opps if "2026-11-01" <= o["CloseDate"] <= "2027-04-30"]
+    assert len(near) >= 0.8 * len(open_opps)
+
+
+def test_competitors_fictional_only(init_dir):
+    opps = sf(init_dir, "Opportunity")
+    comps = {o["Competitor__c"] for o in opps if o["Competitor__c"]}
+    assert comps and comps <= {"RoadLynx", "FleetCore", "Trackwell"}
+    products = {"Vehicle Telematics", "AI Dash Cams", "Driver Safety", "Fuel & Maintenance",
+                "Compliance/ELD", "Equipment Monitoring"}
+    for o in opps:
+        assert set(o["Products__c"].split(";")) <= products
+
+
+def test_transcript_roles_and_text(init_dir):
+    roles = {"VP Operations", "Fleet Manager", "Safety Director", "CFO", "IT"}
+    txs = transcripts(init_dir)
+    seen = set()
+    for t in txs:
+        assert set(t) == {"meeting_id", "opportunity_id", "account_id", "started_at",
+                          "duration_min", "attendees", "turns"}
+        assert len(t["turns"]) >= 12
+        for a in t["attendees"]:
+            if a["company"] != "Fleetwise":
+                assert a["role"] in roles
+                seen.add(a["role"])
+    assert seen == roles

@@ -1,0 +1,40 @@
+# Daily Fleetwise job. Task 2 adds `generate_data`; later tasks extend the DAG
+# (governance, pipeline refresh, AI insights, scoring, NBA, Lakebase sync ...).
+resources:
+  jobs:
+    seller_superapp_daily:
+      name: seller_superapp_daily
+      description: Fleetwise Seller Super App - generate raw data, then (later tasks) refresh, score and sync.
+      max_concurrent_runs: 1
+      parameters:
+        - name: mode
+          default: init
+        - name: batch
+          default: "0"
+      environments:
+        - environment_key: generator_env
+          spec:
+            client: "4"
+            dependencies:
+              # pinned so serverless output is byte-identical to local runs
+              - faker==40.54.0
+      tasks:
+        - task_key: generate_data
+          environment_key: generator_env
+          spark_python_task:
+            python_file: ../jobs/generate_data.py
+            parameters:
+              - --catalog
+              - ${var.catalog}
+              - --schema
+              - ${var.schema}
+              - --volume
+              - ${var.volume}
+              - --mode
+              - "{{job.parameters.mode}}"
+              - --batch
+              - "{{job.parameters.batch}}"
+              - --seed
+              - "42"
+              - --src-dir
+              - ${workspace.file_path}/src
