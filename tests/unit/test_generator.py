@@ -3,6 +3,7 @@
 import csv
 import hashlib
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -148,13 +149,18 @@ def test_referential_integrity(init_dir):
     assert all(t["record_id"] in records for t in truth(init_dir))
 
 
-def test_truth_not_in_raw(init_dir):
-    banned = ("true_intent", "will_win", "planted_")
-    for p in init_dir.rglob("*"):
-        rel = p.relative_to(init_dir).as_posix()
-        if p.is_file() and not rel.startswith("_eval/"):
+@pytest.mark.parametrize("which", ["init", "inc"])
+def test_truth_not_in_raw(which, init_dir, inc_dir):
+    root = init_dir if which == "init" else inc_dir
+    banned = ("true_intent", "will_win", "planted_", "outcome_fields_to_mask")
+    n = 0
+    for p in root.rglob("*"):
+        rel = p.relative_to(root).as_posix()
+        if p.is_file() and not rel.startswith(("_eval/", "_manifest/")):
             text = p.read_text()
             assert not any(b in text for b in banned), rel
+            n += 1
+    assert n > 10
 
 
 def test_truth_shape(init_dir):
@@ -174,9 +180,10 @@ def test_closed_opp_snapshot_mid_lifecycle(init_dir):
     opps = {o["Id"]: o for o in sf(init_dir, "Opportunity")}
     tr = {t["record_id"]: t for t in truth(init_dir) if t["record_type"] == "Opportunity"}
     closed = [o for o in opps.values() if o["IsClosed"]]
-    for o in closed[:500]:
+    assert len(closed) == 12000
+    for o in closed:
         snap = tr[o["Id"]]["snapshot_date"]
-        assert o["CreatedDate"][:10] < snap < o["CloseDate"] or o["CreatedDate"][:10] == snap
+        assert o["CreatedDate"][:10] < snap < o["CloseDate"], o["Id"]
     # transcripts on closed opps fall both before and after the snapshot
     before = after = 0
     for t in transcripts(init_dir):
@@ -316,3 +323,74 @@ def test_transcript_roles_and_text(init_dir):
                 assert a["role"] in roles
                 seen.add(a["role"])
     assert seen == roles
+
+
+MEET_CODE = re.compile(r"^[a-z]{3}-[a-z]{4}-[a-z]{3}$")
+
+
+def test_meeting_ids_look_like_meet_codes(init_dir, inc_dir, tmp_path):
+    generate("increment", tmp_path, SEED, 2)
+    ids = ([t["meeting_id"] for t in transcripts(init_dir)]
+           + [t["meeting_id"] for t in transcripts(inc_dir, 1)]
+           + [t["meeting_id"] for t in transcripts(tmp_path, 2)])
+    assert len(ids) == 680 and len(set(ids)) == 680
+    assert all(MEET_CODE.match(i) for i in ids), [i for i in ids if not MEET_CODE.match(i)][:3]
+
+
+def test_increment_preserves_next_step(init_dir, inc_dir):
+    init_ns = {o["Id"]: o["NextStep"] for o in sf(init_dir, "Opportunity")}
+    inc = sf(inc_dir, "Opportunity", 1)
+    assert sum(1 for o in inc if init_ns[o["Id"]]) > 30
+    for o in inc:
+        assert o["NextStep"] == init_ns[o["Id"]], o["Id"]
+
+
+def test_lead_truth_declares_masked_fields(init_dir, inc_dir):
+    leads = {l["Id"]: l for l in sf(init_dir, "Lead") + sf(inc_dir, "Lead", 1)}
+    rows = [t for t in truth(init_dir) + truth(inc_dir, 1) if t["record_type"] == "Lead"]
+    assert len(rows) == 4050
+    for t in rows:
+        assert t["outcome_fields_to_mask"] == ["Status", "IsConverted", "ConvertedDate"]
+        assert t["snapshot_date"] == leads[t["record_id"]]["CreatedDate"][:10]
+    for t in truth(init_dir):
+        if t["record_type"] != "Lead":
+            assert t["outcome_fields_to_mask"] == []
+
+
+def test_old_lead_status_not_binary(init_dir):
+    old = [l for l in sf(init_dir, "Lead") if l["CreatedDate"][:10] < "2026-09-01"]
+    statuses = {l["Status"] for l in old if not l["IsConverted"]}
+    assert {"Nurturing", "Unqualified", "Working - Contacted"} <= statuses
+
+
+def test_increment_closed_opps_get_truth(inc_dir):
+    closed = [o for o in sf(inc_dir, "Opportunity", 1) if o["IsClosed"]]
+    assert closed
+    tr = {t["record_id"]: t for t in truth(inc_dir, 1) if t["record_type"] == "Opportunity"}
+    assert set(tr) == {o["Id"] for o in closed}
+    for o in closed:
+        t = tr[o["Id"]]
+        assert o["CreatedDate"][:10] < t["snapshot_date"] < o["CloseDate"]
+        assert t["will_win"] == o["IsWon"]
+
+
+def test_transcript_phrasing_varies(init_dir):
+    txs = transcripts(init_dir)
+    tr = {t["record_id"]: t for t in truth(init_dir) if t["record_type"] == "Transcript"}
+    acks, openers, scattered = set(), set(), 0
+    for t in txs:
+        texts = [x["text"] for x in t["turns"]]
+        acks.add(texts[next(i for i, x in enumerate(texts) if x.startswith(("What I was hoping",
+                 "Today I wanted", "Today the goal", "Your renewal"))) + 1])
+        recap = [x for x in texts if "you'll" in x or x.startswith(("So, to recap", "Okay, just so",
+                 "Let me play back", "Before we drop", "Great. So action", "Let me summarize"))]
+        openers |= {x.split(":")[0] for x in recap if ":" in x}
+        if any("I've got my action items" in x for x in texts) or any(
+                x.startswith(("Let me make a note", "Okay, that's on me", "Good point.")) for x in texts):
+            scattered += 1
+        for x in texts:
+            assert "(CFO" not in x and "Fleet Manager)" not in x
+        if tr[t["meeting_id"]]["call_type"] == "renewal":
+            assert not any(x.startswith("We've been on") for x in texts)
+    assert len(acks) >= 5 and len(openers) >= 5
+    assert scattered >= 60

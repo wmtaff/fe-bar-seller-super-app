@@ -59,6 +59,7 @@ LEAD_NOTES_LOW = [
     "Student researching fleet technology.",
 ]
 LEAD_COMPETITOR_NOTE = "Currently on {comp}; contract ends in {month}."
+LEAD_OUTCOME_FIELDS = ("Status", "IsConverted", "ConvertedDate")
 MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August",
           "September", "October", "November", "December"]
 
@@ -87,9 +88,15 @@ def _lead(w: World, idx: int, rng: random.Random, fk, created: datetime, used: s
     elif age_days < 45:
         status, converted = "Working - Contacted", False
     elif will_win:
-        status, converted = "Qualified", age_days > 60
+        # most good leads qualify (and convert after ~60 days); some are still being worked
+        if rng.random() < 0.8:
+            status, converted = "Qualified", age_days > 60
+        else:
+            status, converted = "Working - Contacted", False
     else:
-        status, converted = rng.choice(["Unqualified", "Unqualified", "Nurture"]), False
+        # not a binary open/closed signal: a mix of nurture, disqualified and still-open
+        status = rng.choices(["Nurturing", "Unqualified", "Working - Contacted"], [0.4, 0.4, 0.2])[0]
+        converted = False
     owner = rng.choice(sellers_by_region[region])
     interest = sorted({product, rng.choice(C.PRODUCTS)}, key=C.PRODUCTS.index)
     lead = {
@@ -104,7 +111,10 @@ def _lead(w: World, idx: int, rng: random.Random, fk, created: datetime, used: s
         "CreatedDate": C.fmt_ts(created),
         "LastModifiedDate": C.fmt_ts(created + timedelta(days=min(age_days, rng.randint(0, 50)))),
     }
-    truth = truth_row("Lead", lead["Id"], intent, comps, [], will_win, created.date().isoformat())
+    # Status / IsConverted / ConvertedDate reflect the outcome (realistic CRM, ruling R11):
+    # scorers must mask them, judging the lead as of snapshot_date (its creation date).
+    truth = truth_row("Lead", lead["Id"], intent, comps, [], will_win, created.date().isoformat(),
+                      outcome_fields_to_mask=list(LEAD_OUTCOME_FIELDS))
     return lead, truth
 
 
@@ -151,13 +161,15 @@ def leads_increment(w: World, batch: int, used_names: set[str]) -> tuple[list[di
 def truth_row(record_type: str, record_id: str, intent: float, competitors: list[str],
               next_steps: list[dict], will_win: bool, snapshot_date: str, *,
               quotes: list[dict] | None = None, call_type: str | None = None,
-              sentiment: str | None = None, opportunity_id: str | None = None) -> dict:
+              sentiment: str | None = None, opportunity_id: str | None = None,
+              outcome_fields_to_mask: list[str] | None = None) -> dict:
     return {
         "record_type": record_type, "record_id": record_id, "true_intent": round(intent, 4),
         "planted_competitors": competitors, "planted_next_steps": next_steps,
         "will_win": bool(will_win), "snapshot_date": snapshot_date,
         "competitor_quotes": quotes or [], "call_type": call_type,
         "planted_sentiment": sentiment, "opportunity_id": opportunity_id,
+        "outcome_fields_to_mask": outcome_fields_to_mask or [],
     }
 
 

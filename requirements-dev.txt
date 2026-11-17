@@ -1,6 +1,6 @@
 pytest>=8
 databricks-sdk>=0.81
-faker
+faker==40.54.0  # pinned: generator output (names) is byte-identical only on this version; matches the job env
 numpy
 requests
 scikit-learn

@@ -207,6 +207,24 @@ SE_LINES = [
     "From a technical side, the hardware is plug-and-play on the diagnostic port for most of your vehicles.",
     "I'll also set up the integration with your maintenance system during onboarding.",
 ]
+AGENDA_ACKS = ["Works for me.", "Sounds good.", "Yep, let's do it.", "Perfect, go ahead.",
+               "That works. I've got a hard stop at the top of the hour, though.",
+               "Great. I've got a couple of questions too, but go ahead."]
+RECAP_OPENERS = ["So, to recap next steps: ", "Okay, just so we're aligned on next steps: ",
+                 "Let me play back what I heard for next steps: ", "Before we drop, here's what I have: ",
+                 "Great. So action items: ", "Let me summarize where we landed: "]
+RECAP_ACKS = {False: ["Yep, that works.", "Sounds right to me.", "That's what I have too.",
+                      "Perfect. Talk then."],
+              True: ["Sure. No promises on timing, though.", "Okay. We'll see how it goes on our end."]}
+INLINE_SELLER_STEP = ["Let me make a note. {step}.", "Okay, that's on me. {step}.",
+                      "Good point. {step}, so you have it before the next conversation."]
+INLINE_ASK = ["{first}, could you {action} by {when}? That would really help.",
+              "Would it be possible for you to {action} by {when}, {first}?"]
+RENEWAL_COMPETITOR_MENTIONS = [
+    "To be transparent, {competitor} reached out about our renewal and offered us a discount.",
+    "Leadership asked me to get a quote from {competitor} before we renew.",
+    "We've had {competitor} in for a demo, just to benchmark before the renewal.",
+]
 ACKS = ["Great, that's really helpful.", "Perfect. I'll make sure we're ready on our side.",
         "Love hearing that.", "That's great to hear.", "Okay, good. That helps me plan."]
 NEXT_STEP_SELLER = [
@@ -300,7 +318,12 @@ def render_call(rng: random.Random, *, meeting_id: str, call_type: str, started_
     if se_name:
         turns.append((S, f"I also brought {se_name.split()[0]}, one of our solutions engineers, for the technical questions."))
     turns.append((S, AGENDA[call_type]))
-    turns.append((lead_c["Name"], "Works for me."))
+    turns.append((lead_c["Name"], rng.choice(AGENDA_ACKS)))
+    body_start = len(turns)
+    breaks: list[int] = []  # turn indices that sit between two complete exchanges
+
+    def brk() -> None:
+        breaks.append(len(turns))
 
     # 2. body by call type
     products = opp["products"]
@@ -314,8 +337,13 @@ def render_call(rng: random.Random, *, meeting_id: str, call_type: str, started_
         turns.append((S, "That's really common. How are you handling that today?"))
         turns.append((cust(), "Mostly phone calls and gut feel, if I'm being honest."))
         turns.append((S, DISCOVERY_Q[2]))
-        roles_here = ", ".join(sorted({c['Role__c'] for c in contacts}))
-        turns.append((lead_c["Name"], f"It'd be the group on this call ({roles_here}), and our CFO signs anything over budget."))
+        others = [c for c in contacts if c is not lead_c]
+        if others:
+            who = " and ".join(f"{c['FirstName']}, our {c['Title']}" for c in others)
+            line = f"It'd be me, {who}. And our CFO signs off on anything over budget."
+        else:
+            line = "Mostly me, but our CFO signs off on anything over budget, and ops leadership will want a say."
+        turns.append((lead_c["Name"], line))
     elif call_type == "demo_followup":
         turns.append((cust(), "The team liked the demo. A few questions came up afterward."))
         for p in products[:3]:
@@ -341,18 +369,23 @@ def render_call(rng: random.Random, *, meeting_id: str, call_type: str, started_
         else:
             turns.append((cust("Fleet Manager"), "Honestly, adoption has been spotty out in the field, and a couple of sites stopped using it."))
 
+    brk()
+
     # role-specific questions
     for role in [c["Role__c"] for c in contacts][:2]:
         if rng.random() < 0.7:
             q, a = rng.choice(ROLE_LINES[role])
             turns.append((by_role[role]["Name"], q))
             turns.append((se_name if (role == "IT" and se_name) else S, a))
+            brk()
     if se_name:
         turns.append((se_name, rng.choice(SE_LINES)))
         turns.append((lead_c["Name"], "Good to know, thanks."))
+        brk()
     for sq, hi_a, lo_a in rng.sample(EXTRA_EXCHANGES, rng.randint(2, 4)):
         turns.append((S, sq))
         turns.append((cust(), hi_a if intent + rng.uniform(-0.15, 0.15) >= 0.5 else lo_a))
+        brk()
 
     # 3. buying signals & objections scale with intent
     n_signals = max(0, round(intent * 4 + rng.uniform(-0.7, 0.7)))
@@ -363,9 +396,11 @@ def render_call(rng: random.Random, *, meeting_id: str, call_type: str, started_
         turns.append((cust(), fill(line, deadline=deadline)))
         if acks and rng.random() < 0.6:
             turns.append((S, acks.pop()))
+        brk()
     for obj, resp in rng.sample(OBJECTIONS, min(n_objections, len(OBJECTIONS))):
         turns.append((cust(), fill(obj)))
         turns.append((S, fill(resp)))
+        brk()
     if 0.35 <= intent < 0.6:
         turns.append((cust(), rng.choice(NEUTRAL_LINES)))
 
@@ -378,8 +413,10 @@ def render_call(rng: random.Random, *, meeting_id: str, call_type: str, started_
                                                           expires=exp)))
             turns.append((S, QUOTE_RESPONSE.format(expires=exp)))
         else:
-            turns.append((cust(), rng.choice(COMPETITOR_MENTIONS).format(competitor=comp)))
+            bank = RENEWAL_COMPETITOR_MENTIONS if call_type == "renewal" else COMPETITOR_MENTIONS
+            turns.append((cust(), rng.choice(bank).format(competitor=comp)))
             turns.append((S, rng.choice(COMPETITOR_RESPONSES).format(competitor=comp)))
+        brk()
 
     # 5. next steps said aloud
     n_steps = 3 if intent >= 0.65 else 2 if intent >= 0.35 else 1
@@ -403,16 +440,38 @@ def render_call(rng: random.Random, *, meeting_id: str, call_type: str, started_
             steps.append({"action": c_actions[ci], "owner": c["Name"], "due": due.isoformat()})
             ci += 1
     steps.sort(key=lambda st: st["due"])
-    parts = []
-    for st in steps:
+
+    def step_text(st: dict) -> str:
         when = spoken_date(date.fromisoformat(st["due"]))
         if st["owner"] == S:
-            parts.append(f"I'll {st['action']} by {when}")
+            return f"I'll {st['action']} by {when}"
+        return f"{st['owner'].split()[0]}, you'll {st['action']} by {when}"
+
+    comp_action = NEXT_STEP_SELLER_COMP.format(competitor=mention_competitors[0]) if mention_competitors else None
+    scatter = [st for st in steps if st["action"] != comp_action] if rng.random() < 0.4 else []
+    slots = sorted(set(b for b in breaks if b >= body_start + 2)) or [len(turns)]
+    inserts = []
+    for st in scatter:
+        # said in the flow of the conversation (between exchanges), not in a closing recap
+        pos = rng.choice(slots)
+        if st["owner"] == S:
+            pair = [(S, rng.choice(INLINE_SELLER_STEP).format(step=step_text(st)))]
         else:
-            parts.append(f"{st['owner'].split()[0]}, you'll {st['action']} by {when}")
-    recap = "So, to recap next steps: " + "; and ".join(parts) + "."
-    turns.append((S, recap))
-    turns.append((lead_c["Name"], "Yep, that works." if sentiment != "negative" else "Sure. No promises on timing, though."))
+            first = st["owner"].split()[0]
+            pair = [(S, rng.choice(INLINE_ASK).format(first=first, action=st["action"],
+                                                       when=spoken_date(date.fromisoformat(st["due"])))),
+                    (st["owner"], rng.choice(["Yes, I can do that.", "Sure, I'll get that to you.",
+                                              "I can do that."]))]
+        inserts.append((pos, pair))
+    for pos, pair in sorted(inserts, key=lambda x: -x[0]):
+        turns[pos:pos] = pair
+    rest = [st for st in steps if st not in scatter]
+    if rest:
+        recap = rng.choice(RECAP_OPENERS) + "; and ".join(step_text(st) for st in rest) + "."
+        turns.append((S, recap))
+    else:
+        turns.append((S, "I think I've got my action items. I'll send a recap email after this."))
+    turns.append((lead_c["Name"], rng.choice(RECAP_ACKS[sentiment == "negative"])))
 
     # 6. closing
     c_close, s_close = rng.choice(CLOSING[sentiment])

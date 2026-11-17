@@ -11,7 +11,7 @@ from . import config as C
 from .activities import (_business_dt, activities_init, activity, event_row, hist_row,
                          history_rows, leads_increment, leads_init, truth_row)
 from .entities import World, build_core, opp_row, rng_for
-from .ids import meeting_id
+from .ids import MeetingIds
 from .transcripts import render_call
 from .usage import USAGE_COLUMNS, tickets_increment, tickets_init, usage_increment, usage_init
 from .writer import write_csv, write_documents, write_jsonl, write_manifest
@@ -61,9 +61,10 @@ def _attendees(w: World, rng: random.Random, acc: dict, call_type: str) -> list[
 class CallFactory:
     """Renders calls + their Event rows + truth rows, with stable indices."""
 
-    def __init__(self, w: World, kind_idx: dict[str, int]):
+    def __init__(self, w: World, kind_idx: dict[str, int], mids: MeetingIds):
         self.w = w
         self.kind_idx = kind_idx
+        self.mids = mids
 
     def make(self, rng: random.Random, m_index: int, o: dict, call_type: str, started: datetime,
              mention_quote: bool, created_lm: datetime | None = None):
@@ -76,7 +77,7 @@ class CallFactory:
         quote = o["quote"] if mention_quote else None
         mention = [c for c in o["competitors"]
                    if (quote and quote["competitor"] == c) or rng.random() < 0.7]
-        mid = meeting_id(m_index, w.seed)
+        mid = self.mids.get(m_index)
         tx, planted = render_call(rng, meeting_id=mid, call_type=call_type, started_at=started,
                                   opp=o, account=acc, seller=seller, se_name=se, contacts=contacts,
                                   mention_competitors=mention, quote=quote)
@@ -133,13 +134,13 @@ def plan_init_calls(w: World) -> list[tuple[dict, list[tuple[date, bool]]]]:
 
 
 # --------------------------------------------------------------------------- init
-def build_init(seed: int) -> dict:
-    w = build_core(seed)
-    kind_idx = {"Task": 0, "Event": 0}
-    factory = CallFactory(w, kind_idx)
+def init_calls(w: World, factory: CallFactory):
+    """Render the init calls and derive Opportunity.NextStep (deterministic).
 
-    # transcripts first (their Events take the first Event indices)
-    rng = rng_for(seed, "calls")
+    Both --init and --increment run this, so NextStep (taken from the seller's
+    spoken next step) survives into increment rows.
+    """
+    rng = rng_for(w.seed, "calls")
     txs, events, tx_truth = [], [], []
     steps_by_opp: dict[str, list[dict]] = {}
     m = 0
@@ -158,12 +159,28 @@ def build_init(seed: int) -> dict:
                 o["next_step_field"] = seller_steps[0]["action"].capitalize()
     assert m == C.N_TRANSCRIPTS, m
 
-    rng_ns = rng_for(seed, "nextstep")
+    rng_ns = rng_for(w.seed, "nextstep")
     generic = ["Follow up on proposal", "Schedule demo", "Send pricing", "Confirm decision makers",
                "Check in after budget review"]
     for o in w.opps:
         if "next_step_field" not in o and not o["IsClosed"] and rng_ns.random() < 0.4:
             o["next_step_field"] = rng_ns.choice(generic)
+    return txs, events, tx_truth, steps_by_opp
+
+
+def opp_truth_row(o: dict, steps_by_opp: dict[str, list[dict]]) -> dict:
+    return truth_row("Opportunity", o["Id"], o["intent"], o["competitors"],
+                     steps_by_opp.get(o["Id"], []), o["will_win"],
+                     (o["snapshot"] if o["IsClosed"] else C.AS_OF_DATE).isoformat(),
+                     quotes=[o["quote"]] if o["quote"] else [])
+
+
+def build_init(seed: int) -> dict:
+    w = build_core(seed)
+    kind_idx = {"Task": 0, "Event": 0}
+    factory = CallFactory(w, kind_idx, MeetingIds(seed))
+    # transcripts first (their Events take the first Event indices)
+    txs, events, tx_truth, steps_by_opp = init_calls(w, factory)
 
     acts = activities_init(w, C.TARGET_ACTIVITIES - len(events), kind_idx)
     acts["Event"] = events + acts["Event"]
@@ -177,11 +194,7 @@ def build_init(seed: int) -> dict:
     used_names = {a["Name"] for a in w.accounts}
     leads, lead_truth = leads_init(w, used_names)
 
-    opp_truth = [truth_row("Opportunity", o["Id"], o["intent"], o["competitors"],
-                           steps_by_opp.get(o["Id"], []), o["will_win"],
-                           (o["snapshot"] if o["IsClosed"] else C.AS_OF_DATE).isoformat(),
-                           quotes=[o["quote"]] if o["quote"] else [])
-                 for o in w.opps]
+    opp_truth = [opp_truth_row(o, steps_by_opp) for o in w.opps]
     return {
         "User": w.users, "UserRole": w.roles, "Account": w.accounts, "Contact": w.contacts,
         "Opportunity": [opp_row(w, o) for o in w.opps], "OpportunityHistory": hist,
@@ -192,8 +205,12 @@ def build_init(seed: int) -> dict:
 
 
 # --------------------------------------------------------------------------- increments
-def apply_stage_changes(w: World, batch: int) -> tuple[list[dict], list[dict]]:
-    """Mutate opp state for `batch`; return (changed opp rows, history rows)."""
+def apply_stage_changes(w: World, batch: int) -> tuple[list[dict], list[dict], list[dict]]:
+    """Mutate opp state for `batch`; return (changed opp rows, history rows, opps closed now).
+
+    An opp closed in an increment gets snapshot_date = created + 60% of its
+    lifecycle (strictly before the close date), like init's closed opps.
+    """
     rng = rng_for(w.seed, "inc", batch, "stage")
     ts = C.batch_ts(batch)
     ts_s = C.fmt_ts(ts)
@@ -201,7 +218,7 @@ def apply_stage_changes(w: World, batch: int) -> tuple[list[dict], list[dict]]:
              and not (o["OwnerId"] == w.jordan_id and o["StageName"] == "Negotiation")]
     chosen = sorted(rng.sample(cands, min(C.INC_STAGE_CHANGES, len(cands))), key=lambda o: o["idx"])
     base = C.INC_INDEX_BASE + (batch - 1) * C.INC_INDEX_STRIDE
-    opp_rows, hist = [], []
+    opp_rows, hist, closed_now = [], [], []
     for i, o in enumerate(chosen):
         jordan = o["OwnerId"] == w.jordan_id
         st = o["StageName"]
@@ -220,22 +237,32 @@ def apply_stage_changes(w: World, batch: int) -> tuple[list[dict], list[dict]]:
                 o["Amount"] = int(round(o["Amount"] * rng.uniform(0.9, 1.1), -2))
         else:
             o["close"] = max(o["close"], ts.date()) + timedelta(days=rng.randint(7, 21))
+        if o["IsClosed"]:
+            cycle = (o["close"] - o["created"]).days
+            o["snapshot"] = o["created"] + timedelta(days=max(1, min(cycle - 1, round(0.6 * cycle))))
+            closed_now.append(o)
         o["last_modified"] = ts_s
         opp_rows.append(opp_row(w, o, ts_s))
         hist.append(hist_row(w, base + i, o, o["StageName"], ts_s))
-    return opp_rows, hist
+    return opp_rows, hist, closed_now
 
 
 def build_increment(seed: int, batch: int) -> dict:
     w = build_core(seed)
+    mids = MeetingIds(seed)
+    # replay init calls: derives NextStep + spoken next steps, and reserves init meeting ids
+    _, _, _, steps_by_opp = init_calls(w, CallFactory(w, {"Task": 0, "Event": 0}, mids))
     for k in range(1, batch):
         apply_stage_changes(w, k)  # replay earlier batches (state only)
-    opp_rows, hist = apply_stage_changes(w, batch)
+        kb = C.INC_INDEX_BASE + (k - 1) * C.INC_INDEX_STRIDE
+        for i in range(C.INC_TRANSCRIPTS):
+            mids.get(kb + i)  # reserve earlier batches' meeting ids in canonical order
+    opp_rows, hist, closed_now = apply_stage_changes(w, batch)
 
     ts = C.batch_ts(batch)
     base = C.INC_INDEX_BASE + (batch - 1) * C.INC_INDEX_STRIDE
     kind_idx = {"Task": base, "Event": base}
-    factory = CallFactory(w, kind_idx)
+    factory = CallFactory(w, kind_idx, mids)
     rng = rng_for(seed, "inc", batch, "calls")
     open_opps = [o for o in w.opps if not o["IsClosed"]]
     jordan_open = [o for o in open_opps if o["OwnerId"] == w.jordan_id]
@@ -268,7 +295,7 @@ def build_increment(seed: int, batch: int) -> dict:
         "Opportunity": opp_rows, "OpportunityHistory": hist, "Lead": leads,
         "Task": acts["Task"], "Event": acts["Event"], "meet_transcripts": txs,
         "product_usage": usage_increment(w, batch), "support_tickets": tickets_increment(w, batch),
-        "truth": lead_truth + tx_truth,
+        "truth": [opp_truth_row(o, steps_by_opp) for o in closed_now] + lead_truth + tx_truth,
     }
 
 

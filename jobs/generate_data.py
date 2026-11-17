@@ -1,9 +1,11 @@
 """Job entrypoint (task `generate_data`): write one generator batch to the UC volume.
 
 Params: --catalog --schema --volume --mode {init,increment} --batch {N|auto} [--seed 42]
-        [--src-dir <bundle files>/src]
+        [--dataset-version v2] [--src-dir <bundle files>/src]
 
-Idempotent: if /Volumes/<c>/<s>/<v>/_manifest/batch=<NNNN>.json exists the batch
+Output root: /Volumes/<c>/<s>/<v>/<dataset_version>/ (ruling R10: v2; the original
+files at the volume root are left untouched).
+Idempotent: if <root>/_manifest/batch=<NNNN>.json exists the batch
 is skipped. Files are generated on local disk, then copied into the volume with
 the manifest copied last (so a half-copied batch is redone on re-run).
 """
@@ -41,6 +43,7 @@ def main() -> None:
     ap.add_argument("--mode", choices=["init", "increment"], default="init")
     ap.add_argument("--batch", default="0")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--dataset-version", default="v2")
     ap.add_argument("--src-dir", default=None)
     a = ap.parse_args()
     _add_src(a.src_dir)
@@ -48,6 +51,8 @@ def main() -> None:
     from fleetwise_gen.generator import generate, manifest_path
 
     out = Path(f"/Volumes/{a.catalog}/{a.schema}/{a.volume}")
+    if a.dataset_version:
+        out = out / a.dataset_version
     if a.mode == "init":
         batch = 0
     elif a.batch in ("auto", ""):

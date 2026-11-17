@@ -47,11 +47,38 @@ def sfid(obj: str, index: int, seed: int) -> str:
     return id15 + checksum_suffix(id15)
 
 
-def meeting_id(index: int, seed: int) -> str:
-    """Google-Meet-style code, e.g. 'kqr-vbxe-tna', stable per (seed, index)."""
-    h = hashlib.sha256(f"meet:{seed}:{index}".encode()).digest()
-    letters = "".join("abcdefghijkmnopqrstuvwxyz"[b % 25] for b in h[:10])
-    return f"{letters[:3]}-{letters[3:7]}-{letters[7:10]}-{index:05d}"
+_MEET_ALPHABET = "abcdefghijkmnopqrstuvwxyz"
+
+
+def _meet_code(seed: int, index: int, attempt: int) -> str:
+    h = hashlib.sha256(f"meet:{seed}:{index}:{attempt}".encode()).digest()
+    c = "".join(_MEET_ALPHABET[b % len(_MEET_ALPHABET)] for b in h[:10])
+    return f"{c[:3]}-{c[3:7]}-{c[7:10]}"
+
+
+class MeetingIds:
+    """Google-Meet-style codes ('kqr-vbxe-tna') unique per seed.
+
+    Uniqueness comes from the hash plus collision checking: allocate indices in
+    the canonical order (init 0..N-1, then each increment's range in batch order)
+    so every run derives the same code for the same index.
+    """
+
+    def __init__(self, seed: int):
+        self.seed = seed
+        self.used: set[str] = set()
+        self.by_index: dict[int, str] = {}
+
+    def get(self, index: int) -> str:
+        if index not in self.by_index:
+            attempt = 0
+            code = _meet_code(self.seed, index, attempt)
+            while code in self.used:
+                attempt += 1
+                code = _meet_code(self.seed, index, attempt)
+            self.used.add(code)
+            self.by_index[index] = code
+        return self.by_index[index]
 
 
 def ticket_id(index: int) -> str:

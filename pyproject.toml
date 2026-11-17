@@ -3,6 +3,8 @@ name = "fe-bar-seller-super-app"
 version = "0.1.0"
 description = "Fleetwise Seller Super App - Databricks FE Bar demo"
 requires-python = ">=3.11"
+# faker is pinned: generator output is byte-identical only on this version (same pin in the job env).
+dependencies = ["faker==40.54.0"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

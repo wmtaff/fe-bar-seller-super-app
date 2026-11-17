@@ -11,6 +11,9 @@ resources:
           default: init
         - name: batch
           default: "0"
+        # Output goes to /Volumes/<catalog>/<schema>/<volume>/<dataset_version>/ (ruling R10).
+        - name: dataset_version
+          default: v2
       environments:
         - environment_key: generator_env
           spec:
@@ -36,5 +39,7 @@ resources:
               - "{{job.parameters.batch}}"
               - --seed
               - "42"
+              - --dataset-version
+              - "{{job.parameters.dataset_version}}"
               - --src-dir
               - ${workspace.file_path}/src
