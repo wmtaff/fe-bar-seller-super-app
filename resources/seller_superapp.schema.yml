@@ -1,0 +1,6 @@
+resources:
+  schemas:
+    seller_superapp:
+      catalog_name: ${var.catalog}
+      name: ${var.schema}
+      comment: Fleetwise Seller Super App - demo data (fictional company).

@@ -1,0 +1,11 @@
+pytest>=8
+databricks-sdk>=0.81
+faker
+numpy
+requests
+scikit-learn
+mlflow-skinny
+psycopg[binary]
+pyyaml
+pandas
+tabulate

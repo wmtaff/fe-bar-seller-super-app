@@ -4,3 +4,11 @@ __pycache__/
 .venv/
 node_modules/
 .env
+.databricks/
+.pytest_cache/
+*.pyc
+*.egg-info/
+dist/
+build/
+.env.*
+!.env.example

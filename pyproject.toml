@@ -1,0 +1,12 @@
+[project]
+name = "fe-bar-seller-super-app"
+version = "0.1.0"
+description = "Fleetwise Seller Super App - Databricks FE Bar demo"
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+markers = [
+    "integration: needs the Databricks CLI profile and live workspace access",
+]

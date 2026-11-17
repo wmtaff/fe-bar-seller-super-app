@@ -1,0 +1,37 @@
+# Fleetwise Seller Super App - Databricks Asset Bundle.
+# Extended by later tasks (pipeline, job, app).
+bundle:
+  name: fe-bar-seller-super-app
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog for all demo objects.
+    default: serverless_stable_s1omq8_catalog
+  schema:
+    description: Schema holding all demo tables, views and volumes.
+    default: seller_superapp
+  volume:
+    description: Managed volume for raw generator output.
+    default: raw
+  warehouse_id:
+    description: SQL warehouse (Demo Warehouse).
+    default: 9a6db1d12e2ee6d3
+  profile:
+    description: Databricks CLI profile used to deploy and run (informational; auth is set in the target).
+    default: fevm-serverless-stable-s1omq8
+
+targets:
+  dev:
+    default: true
+    # No `mode: development`: it force-prefixes UC objects and job names
+    # (dev_<user>_seller_superapp) and an empty presets.name_prefix cannot
+    # turn that off. The demo needs exact names (seller_superapp,
+    # seller_superapp_daily), so this single dev target deploys unprefixed
+    # to the deployer's own bundle folder.
+    workspace:
+      # Host comes from the CLI profile; no workspace URL is hard-coded.
+      profile: fevm-serverless-stable-s1omq8
+      root_path: ~/.bundle/${bundle.name}/${bundle.target}
