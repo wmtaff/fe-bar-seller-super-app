@@ -195,6 +195,20 @@ resources:
               - ${var.lakebase_project}
               - --lakebase-catalog
               - ${var.lakebase_catalog}
+        # Task 9 (ruling R22): row-scoped views over the AI tables (v_next_best_actions,
+        # v_call_insights, v_deal_scores) for Genie. Separate from apply_governance because the
+        # AI tables only exist after next_best_actions; CREATE OR REPLACE VIEW is idempotent.
+        - task_key: governance_ai_views
+          depends_on:
+            - task_key: next_best_actions
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../src/governance/ai_views.sql
+              source: WORKSPACE
+            parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
         # Task 7: offline score evaluation (~400 OpenJev calls + MLflow), only when run_eval=true.
         - task_key: check_run_eval
           depends_on:
