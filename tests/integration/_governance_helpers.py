@@ -6,6 +6,15 @@ GOVERNED_VIEWS = {
     "v_account_360": "gold_account_360",
 }
 
+# Ruling R22: row-scoped views over the AI gold tables (job task governance_ai_views), so Genie
+# never reads an unfiltered seller-owned table. view -> (base table, primary key). Insights and
+# scores carry no owner, so the views filter on the opportunity owner in gold_opportunity_pipeline.
+AI_VIEWS = {
+    "v_next_best_actions": ("gold_next_best_actions", "action_id"),
+    "v_call_insights": ("gold_call_insights", "meeting_id"),
+    "v_deal_scores": ("gold_deal_scores", "opportunity_id"),
+}
+
 
 def fq(names, obj):
     return f"`{names['catalog']}`.`{names['schema']}`.`{obj}`"

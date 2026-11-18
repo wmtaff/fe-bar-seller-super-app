@@ -14,7 +14,7 @@ Expected owner sets are derived with SQL from gold_user_hierarchy (ruling R14).
 import os
 
 import pytest
-from _governance_helpers import GOVERNED_VIEWS, fq, owners, team_ids, user_id
+from _governance_helpers import AI_VIEWS, GOVERNED_VIEWS, fq, owners, team_ids, user_id
 
 pytestmark = [pytest.mark.integration, pytest.mark.governance_mutating]
 
@@ -139,3 +139,28 @@ def test_duplicate_rows_resolve_to_latest(sql, names, persona):
 def test_identity_map_rejects_bad_role(sql, names, persona):
     with pytest.raises(RuntimeError, match="(?i)check|constraint"):
         persona(None, "superuser")
+
+
+def test_ai_views_scoped_to_seller(sql, names, persona):
+    """Ruling R22: v_next_best_actions / v_call_insights / v_deal_scores return exactly the rows
+    of Jordan's opportunities. Expected keys come from the base tables joined to the opportunity
+    owner in gold_opportunity_pipeline (R14), independent of the view definitions."""
+    jordan = user_id(sql, names, "Jordan Rivera")
+    pipe = fq(names, "gold_opportunity_pipeline")
+    persona(jordan, "seller")
+    for view, (base, key) in AI_VIEWS.items():
+        expected = {
+            r["k"]
+            for r in sql(
+                f"SELECT b.{key} AS k FROM {fq(names, base)} b "
+                f"JOIN {pipe} p ON p.opportunity_id = b.opportunity_id WHERE p.owner_id = :u",
+                {"u": jordan},
+            )
+        }
+        assert expected, f"{base}: Jordan should have rows"
+        got = [r["k"] for r in sql(f"SELECT {key} AS k FROM {fq(names, view)}")]
+        assert len(got) == len(set(got)), f"{view}: duplicate {key} (join fan-out)"
+        assert set(got) == expected, f"{view}: seller persona sees the wrong rows"
+        assert owners(sql, names, view) == {jordan}, view
+        total = int(sql(f"SELECT count(*) AS n FROM {fq(names, base)}")[0]["n"])
+        assert len(got) < total, f"{view}: not filtered"

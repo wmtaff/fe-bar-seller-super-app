@@ -12,7 +12,7 @@ test_governance_mutating.py (guarded; see its docstring).
 import re
 
 import pytest
-from _governance_helpers import GOVERNED_VIEWS, fq, rvp_of, team_ids, user_id
+from _governance_helpers import AI_VIEWS, GOVERNED_VIEWS, fq, rvp_of, team_ids, user_id
 
 pytestmark = pytest.mark.integration
 
@@ -43,7 +43,7 @@ def test_governance_objects_exist(sql, names):
     )
     types = {r["table_name"]: r["table_type"] for r in rows}
     assert types.get("demo_identity_map") == "MANAGED"
-    for v in GOVERNED_VIEWS:
+    for v in list(GOVERNED_VIEWS) + list(AI_VIEWS):
         assert types.get(v) == "VIEW", f"{v} missing or not a view: {types.get(v)}"
 
 
@@ -175,7 +175,7 @@ def test_pii_tags_present(sql, names):
 
 
 def test_governed_objects_commented(sql, names):
-    objs = list(GOVERNED_VIEWS) + ["demo_identity_map"]
+    objs = list(GOVERNED_VIEWS) + list(AI_VIEWS) + ["demo_identity_map"]
     rows = sql(
         f"SELECT table_name, comment FROM `{names['catalog']}`.information_schema.tables "
         "WHERE table_schema = :s",
