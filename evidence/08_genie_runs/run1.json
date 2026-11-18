@@ -1,0 +1,501 @@
+{
+  "label": "run 1",
+  "note": "Initial instructions and examples, no tuning.",
+  "space_id": "01f1e3a1962912c08de057636d1912d8",
+  "caller": "will.taff@databricks.com",
+  "persona": "Jordan Rivera",
+  "started_at": "2026-11-18 22:48",
+  "results": [
+    {
+      "id": "q1",
+      "question": "What is my open pipeline by stage this quarter?",
+      "passed": true,
+      "reason": "5 row(s)",
+      "status": "COMPLETED",
+      "latency_s": 19.1,
+      "sql": "SELECT `stage`, SUM(`acv`) AS `open_pipeline_acv`\nFROM `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_opportunity_pipeline`\nWHERE `is_closed` = false\n  AND `is_current_quarter` = true\n  AND `stage` IS NOT NULL\nGROUP BY `stage`\nORDER BY `open_pipeline_acv` DESC, `stage`",
+      "text": "Your **open pipeline this quarter** is highest in **Proposal** at **$432,000**, followed by **Negotiation** at **$401,100** across **5 stages**. The pipeline is concentrated in later stages, with **Proposal** and **Negotiation** together making up most of the total shown.\n\n- **Proposal:** **$432,000**\n- **Negotiation:** **$401,100**\n- **Discovery:** **$145,900**\n- **Demo:** **$133,700**\n- **Qualification:** **$18,900**",
+      "columns": [
+        "stage",
+        "open_pipeline_acv"
+      ],
+      "rows": [
+        [
+          "Proposal",
+          "432000.0"
+        ],
+        [
+          "Negotiation",
+          "401100.0"
+        ],
+        [
+          "Discovery",
+          "145900.0"
+        ],
+        [
+          "Demo",
+          "133700.0"
+        ],
+        [
+          "Qualification",
+          "18900.0"
+        ]
+      ],
+      "row_count": 5
+    },
+    {
+      "id": "q2",
+      "question": "Which of my deals mention a competitor and close this quarter?",
+      "passed": true,
+      "reason": "all 8 opportunity_id(s) are the persona's",
+      "status": "COMPLETED",
+      "latency_s": 20.6,
+      "sql": "SELECT `p`.`opportunity_id`, `p`.`opportunity_name`, `p`.`account_name`, `p`.`stage`, `p`.`acv`, `p`.`close_date`, ROUND(`s`.`competitive_risk`, 2) AS `competitive_risk`, array_distinct(flatten(collect_list(COALESCE(`c`.`competitors`, array())))) AS `competitors_mentioned` FROM `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_opportunity_pipeline` AS `p` LEFT JOIN `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_deal_scores` AS `s` ON `p`.`opportunity_id` = `s`.`opportunity_id` LEFT JOIN `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_call_insights` AS `c` ON `p`.`opportunity_id` = `c`.`opportunity_id` WHERE `p`.`is_closed` = false AND `p`.`is_current_quarter` = true GROUP BY ALL HAVING `competitive_risk` > 0.5 OR size(`competitors_mentioned`) > 0 ORDER BY `p`.`acv` DESC",
+      "text": "You have **8** open deals closing this quarter that are flagged as competitive or mention a competitor. Examples include:\n- **Solis Construction - Vehicle Telematics + 1 New Business** \u2014 **$173,100** ACV, closes **2026-12-30**, competitor: **RoadLynx**\n- **Blue Heron Distribution - Vehicle Telematics + 1 New Business** \u2014 **$109,300** ACV, closes **2026-12-12**, competitor: **FleetCore**\n- **Malone Roofing - Driver Safety + 1 Expansion** \u2014 **$81,600** ACV, closes **2027-01-17**, competitor: **Trackwell**\n- **Granite Falls Distribution - Vehicle Telematics New Business** \u2014 **$70,000** ACV, closes **2026-12-21**, competitor: **RoadLynx**\n- **Elm Crossing Housing Authority - Compliance/ELD New Business** \u2014 **$28,300** ACV, closes **2027-01-28**, competitors: **FleetCore, Trackwell**\n\nMost of these deals are in **Negotiation** or **Proposal**, and the largest competitive deal is **Solis Construction** at **$173,100** ACV.",
+      "columns": [
+        "opportunity_id",
+        "opportunity_name",
+        "account_name",
+        "stage",
+        "acv",
+        "close_date",
+        "competitive_risk",
+        "competitors_mentioned"
+      ],
+      "rows": [
+        [
+          "0060g000000037YAAQ",
+          "Solis Construction - Vehicle Telematics + 1 New Business",
+          "Solis Construction",
+          "Negotiation",
+          "173100.0",
+          "2026-12-30",
+          "0.84",
+          "[\"RoadLynx\"]"
+        ],
+        [
+          "0060g000000037ZAAQ",
+          "Blue Heron Distribution - Vehicle Telematics + 1 New Business",
+          "Blue Heron Distribution",
+          "Negotiation",
+          "109300.0",
+          "2026-12-12",
+          "0.87",
+          "[\"FleetCore\"]"
+        ],
+        [
+          "0060g000000037aAAA",
+          "Malone Roofing - Driver Safety + 1 Expansion",
+          "Malone Roofing",
+          "Negotiation",
+          "81600.0",
+          "2027-01-17",
+          "0.78",
+          "[\"Trackwell\"]"
+        ],
+        [
+          "0060g000000037cAAA",
+          "Granite Falls Distribution - Vehicle Telematics New Business",
+          "Granite Falls Distribution",
+          "Proposal",
+          "70000.0",
+          "2026-12-21",
+          "0.75",
+          "[\"RoadLynx\"]"
+        ],
+        [
+          "0060g000000037gAAA",
+          "Elm Crossing Housing Authority - Compliance/ELD New Business",
+          "Elm Crossing Housing Authority",
+          "Proposal",
+          "28300.0",
+          "2027-01-28",
+          "0.8",
+          "[\"FleetCore\",\"Trackwell\"]"
+        ]
+      ],
+      "row_count": 8
+    },
+    {
+      "id": "q3",
+      "question": "Show my top 5 deals by ACV times close probability.",
+      "passed": true,
+      "reason": "5 row(s)",
+      "status": "COMPLETED",
+      "latency_s": 18.5,
+      "sql": "SELECT\n  `p`.`opportunity_id`,\n  `p`.`opportunity_name`,\n  `p`.`account_name`,\n  `p`.`stage`,\n  `p`.`acv`,\n  ROUND(`s`.`p_close_quarter`, 2) AS `p_close_quarter`,\n  ROUND(`p`.`acv` * `s`.`p_close_quarter`, 2) AS `weighted_acv`,\n  `p`.`close_date`\nFROM `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_opportunity_pipeline` AS `p`\nINNER JOIN `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_deal_scores` AS `s`\n  ON `p`.`opportunity_id` = `s`.`opportunity_id`\nWHERE `p`.`is_closed` = false\n  AND `p`.`acv` IS NOT NULL\n  AND `s`.`p_close_quarter` IS NOT NULL\n  AND `p`.`opportunity_name` IS NOT NULL\n  AND `p`.`account_name` IS NOT NULL\nORDER BY (`p`.`acv` * `s`.`p_close_quarter`) DESC, `p`.`acv` DESC, `p`.`opportunity_name` ASC\nLIMIT 5",
+      "text": "Here are your **top 5 open deals by weighted ACV** (ACV \u00d7 close probability):\n- **Solis Construction - Vehicle Telematics + 1 New Business** (**Solis Construction**) \u2014 **$148,454.01** weighted ACV on **$173,100.00** ACV with **0.86** close probability\n- **Reid General Contractors - Vehicle Telematics + 1 New Business** (**Reid General Contractors**) \u2014 **$95,685.00** weighted ACV on **$105,800.00** ACV with **0.90** close probability\n- **Jones Fire Protection - Vehicle Telematics Renewal** (**Jones Fire Protection**) \u2014 **$94,095.60** weighted ACV on **$205,900.00** ACV with **0.46** close probability\n- **Great Plains Civil Group - Vehicle Telematics + 1 New Business** (**Great Plains Civil Group**) \u2014 **$81,105.42** weighted ACV on **$171,800.00** ACV with **0.47** close probability\n- **Blue Heron Distribution - Vehicle Telematics + 1 New Business** (**Blue Heron Distribution**) \u2014 **$80,898.72** weighted ACV on **$109,300.00** ACV with **0.74** close probability\n\nAcross these 5 deals, weighted ACV ranges from **$80,898.72** to **$148,454.01**, and the highest raw ACV deal is **Jones Fire Protection** at **$205,900.00** even though it ranks third because its close probability is lower.",
+      "columns": [
+        "opportunity_id",
+        "opportunity_name",
+        "account_name",
+        "stage",
+        "acv",
+        "p_close_quarter",
+        "weighted_acv",
+        "close_date"
+      ],
+      "rows": [
+        [
+          "0060g000000037YAAQ",
+          "Solis Construction - Vehicle Telematics + 1 New Business",
+          "Solis Construction",
+          "Negotiation",
+          "173100.0",
+          "0.86",
+          "148454.01",
+          "2026-12-30"
+        ],
+        [
+          "0060g000000037hAAA",
+          "Reid General Contractors - Vehicle Telematics + 1 New Business",
+          "Reid General Contractors",
+          "Proposal",
+          "105800.0",
+          "0.9",
+          "95685.0",
+          "2027-01-20"
+        ],
+        [
+          "0060g000000037kAAA",
+          "Jones Fire Protection - Vehicle Telematics Renewal",
+          "Jones Fire Protection",
+          "Demo",
+          "205900.0",
+          "0.46",
+          "94095.6",
+          "2027-03-08"
+        ],
+        [
+          "0060g000000037oAAA",
+          "Great Plains Civil Group - Vehicle Telematics + 1 New Business",
+          "Great Plains Civil Group",
+          "Demo",
+          "171800.0",
+          "0.47",
+          "81105.42",
+          "2027-02-13"
+        ],
+        [
+          "0060g000000037ZAAQ",
+          "Blue Heron Distribution - Vehicle Telematics + 1 New Business",
+          "Blue Heron Distribution",
+          "Negotiation",
+          "109300.0",
+          "0.74",
+          "80898.72",
+          "2026-12-12"
+        ]
+      ],
+      "row_count": 5
+    },
+    {
+      "id": "q4",
+      "question": "Which accounts have usage down more than 15% in the last 30 days and an open opportunity?",
+      "passed": false,
+      "reason": "SQL returned no rows",
+      "status": "COMPLETED",
+      "latency_s": 25.0,
+      "sql": "SELECT `account_id`, `account_name`, `industry`, `segment`, `region`, `owner_name`, `usage_trend_pct_30d`, `active_vehicles_30d`, `open_opportunities`, `open_pipeline_acv`, `last_activity_at`, `usage_as_of` FROM `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_account_360` WHERE `usage_trend_pct_30d` < -15 AND `open_opportunities` > 0 ORDER BY `usage_trend_pct_30d` ASC, `open_pipeline_acv` DESC, `account_name` ASC",
+      "text": "There are **no accounts** in the results with usage down more than **15%** in the last 30 days and at least **1 open opportunity**. Based on this result set, **0 accounts** currently meet both conditions.",
+      "columns": [
+        "account_id",
+        "account_name",
+        "industry",
+        "segment",
+        "region",
+        "owner_name",
+        "usage_trend_pct_30d",
+        "active_vehicles_30d",
+        "open_opportunities",
+        "open_pipeline_acv",
+        "last_activity_at",
+        "usage_as_of"
+      ],
+      "rows": [],
+      "row_count": 0
+    },
+    {
+      "id": "q5",
+      "question": "What are the open next steps from my last calls?",
+      "passed": true,
+      "reason": "12 row(s)",
+      "status": "COMPLETED",
+      "latency_s": 18.5,
+      "sql": "WITH `last_calls` AS (\n  SELECT\n    `meeting_id`,\n    `opportunity_id`,\n    `account_id`,\n    `started_at`,\n    `next_steps`\n  FROM `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_call_insights`\n  WHERE `extract_error` IS NULL\n    AND `started_at` IS NOT NULL\n  ORDER BY `started_at` DESC\n  LIMIT 5\n)\nSELECT\n  lc.`started_at`,\n  p.`opportunity_name`,\n  p.`account_name`,\n  ns.`action` AS `next_step_action`,\n  ns.`owner` AS `next_step_owner`,\n  CAST(ns.`due` AS DATE) AS `next_step_due`\nFROM `last_calls` lc\nLEFT JOIN `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_opportunity_pipeline` p\n  ON p.`opportunity_id` = lc.`opportunity_id`\nLATERAL VIEW OUTER explode(lc.`next_steps`) t AS ns\nWHERE ns.`action` IS NOT NULL\n  AND (ns.`due` IS NULL OR CAST(ns.`due` AS DATE) >= CURRENT_DATE())\nORDER BY lc.`started_at` DESC, `next_step_due` ASC NULLS LAST, `next_step_action` ASC",
+      "text": "From your **5 most recent calls**, there are **12 open next steps** still outstanding; the earliest dated item is due **2026-11-19** and the latest dated items are due **2026-11-25**, with **5** steps currently showing no due date. Examples include:\n- **Solis Construction** \u2014 Send the ROI model with Solis fuel numbers plugged in (**owner:** Jordan Rivera, **due:** 2026-11-19)\n- **Nash Brewing Distribution** \u2014 Send the revised proposal covering all 172 vehicles (**owner:** Jordan Rivera, **due:** 2026-11-20)\n- **Elm Crossing Housing Authority** \u2014 Send a side-by-side comparison of Fleetwise against FleetCore (**owner:** Jordan Rivera, **due:** 2026-11-23)\n- **Blue Heron Distribution** \u2014 Loop in finance for a pricing review (**owner:** Kenneth Reyes, **due:** 2026-11-23)\n- **Solis Construction** \u2014 Get IT to review the SSO setup (**owner:** Samantha Bryant, **due:** 2026-11-25)",
+      "columns": [
+        "started_at",
+        "opportunity_name",
+        "account_name",
+        "next_step_action",
+        "next_step_owner",
+        "next_step_due"
+      ],
+      "rows": [
+        [
+          "2026-11-16T12:23:00.000Z",
+          "Solis Construction - Fuel & Maintenance New Business",
+          "Solis Construction",
+          "Send the ROI model with Solis fuel numbers plugged in",
+          "Jordan Rivera (Fleetwise AE)",
+          "2026-11-19"
+        ],
+        [
+          "2026-11-16T12:23:00.000Z",
+          "Solis Construction - Fuel & Maintenance New Business",
+          "Solis Construction",
+          "Get IT to review the SSO setup",
+          "Samantha Bryant (customer, Fleet Manager)",
+          "2026-11-25"
+        ],
+        [
+          "2026-11-16T12:23:00.000Z",
+          "Solis Construction - Fuel & Maintenance New Business",
+          "Solis Construction",
+          "Get back to Jordan on what leadership needs to see to make this a priority",
+          "Frances Gonzalez (customer, VP Operations)",
+          null
+        ],
+        [
+          "2026-11-16T12:18:00.000Z",
+          "Elm Crossing Housing Authority - Compliance/ELD New Business",
+          "Elm Crossing Housing Authority",
+          "Send a side-by-side comparison of Fleetwise against FleetCore",
+          "Jordan Rivera (Fleetwise AE)",
+          "2026-11-23"
+        ],
+        [
+          "2026-11-16T12:18:00.000Z",
+          "Elm Crossing Housing Authority - Compliance/ELD New Business",
+          "Elm Crossing Housing Authority",
+          "Set up a meeting with the leadership team to review the proposal",
+          "Carolyn Kim (customer, Fleet Manager)",
+          "2026-11-23"
+        ]
+      ],
+      "row_count": 12
+    },
+    {
+      "id": "q6",
+      "question": "What is my quota attainment and pipeline coverage this quarter?",
+      "passed": true,
+      "reason": "1 row(s)",
+      "status": "COMPLETED",
+      "latency_s": 11.9,
+      "sql": "SELECT `owner_name`, `fiscal_quarter`, `quota`, `closed_won_acv`, `attainment_pct`, `open_pipeline_acv`, `coverage_ratio`\nFROM `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_seller_kpis`\nWHERE `is_current_quarter` = true\nORDER BY `owner_name`",
+      "text": "For **FY27Q4**, **Jordan Rivera** has a quota of **$500,000**, closed-won ACV of **$176,700**, and quota attainment of **35.3%**. For **FY27Q4**, **Jordan Rivera** also has open pipeline ACV of **$1,131,600** and pipeline coverage of **3.5x**, which means the current pipeline is 3.5 times the **$500,000** quota.",
+      "columns": [
+        "owner_name",
+        "fiscal_quarter",
+        "quota",
+        "closed_won_acv",
+        "attainment_pct",
+        "open_pipeline_acv",
+        "coverage_ratio"
+      ],
+      "rows": [
+        [
+          "Jordan Rivera",
+          "FY27Q4",
+          "500000.0",
+          "176700.0",
+          "35.3",
+          "1131600.0",
+          "3.5"
+        ]
+      ],
+      "row_count": 1
+    },
+    {
+      "id": "q7",
+      "question": "What are my top 5 open next best actions by priority?",
+      "passed": true,
+      "reason": "5 row(s)",
+      "status": "COMPLETED",
+      "latency_s": 16.4,
+      "sql": "SELECT\n  a.`action_id`,\n  a.`action_type`,\n  a.`title`,\n  a.`why`,\n  a.`due_date`,\n  a.`priority_score`,\n  a.`status`,\n  p.`opportunity_name`,\n  p.`account_name`\nFROM `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_next_best_actions` a\nLEFT JOIN `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_opportunity_pipeline` p\n  ON p.`opportunity_id` = a.`opportunity_id`\nWHERE a.`status` IS NOT NULL\n  AND a.`priority_score` IS NOT NULL\n  AND a.`status` = 'open'\nORDER BY a.`priority_score` DESC, a.`due_date` ASC, a.`created_at` DESC\nLIMIT 5",
+      "text": "Your **top 5 open next best actions** are all tied to **Solis Construction - Vehicle Telematics + 1 New Business** at **Solis Construction**. Examples include:\n- **Priority 222,681.01** \u2014 Send a side-by-side comparison against the **RoadLynx** quote, due **2026-11-04**\n- **Priority 222,681.01** \u2014 Set up time with the **Solis leadership team** to review the proposal, due **2026-11-05**\n- **Priority 222,681.01** \u2014 Schedule a call between **Albert Harris** and the **Solis IT team**, due **2026-11-12**\n- **Priority 222,681.01** \u2014 Counter **RoadLynx** before the quarter closes, due **2026-12-04**\n- **Priority 148,454.01** \u2014 Set up the integration with the customer\u2019s maintenance system during onboarding, **no due date shown**\nAcross all 5 actions shown, **Solis Construction** is the only account represented, and the highest priority score is **222,681.01**.",
+      "columns": [
+        "action_id",
+        "action_type",
+        "title",
+        "why",
+        "due_date",
+        "priority_score",
+        "status",
+        "opportunity_name",
+        "account_name"
+      ],
+      "rows": [
+        [
+          "f09662da80e497b58b59f18783e4a7d60aa7a889fbcd9dd6071dcfc2f08ba95a",
+          "call_next_step",
+          "Send a side-by-side comparison against the RoadLynx quote, including coaching and insurance savings",
+          "Agreed on the 2026-10-29 call (owner: Jordan Rivera (Fleetwise AE)), due 2026-11-04.",
+          "2026-11-04",
+          "222681.01078878215",
+          "open",
+          "Solis Construction - Vehicle Telematics + 1 New Business",
+          "Solis Construction"
+        ],
+        [
+          "75b600d4c10a01a17b0aae65f45ba13dfabe99952e6177fb5fe041ce36ee36d6",
+          "call_next_step",
+          "Set up time with the Solis leadership team to review the proposal",
+          "Agreed on the 2026-10-29 call (owner: Frances Gonzalez (customer, VP Operations)), due 2026-11-05.",
+          "2026-11-05",
+          "222681.01078878215",
+          "open",
+          "Solis Construction - Vehicle Telematics + 1 New Business",
+          "Solis Construction"
+        ],
+        [
+          "91540ede0e8e3f2e3e64aebebdd68596a5b97f37455b5b3c4afeb5d314d680cf",
+          "call_next_step",
+          "Schedule a call between Albert Harris and the Solis IT team",
+          "Agreed on the 2026-10-29 call (owner: Jordan Rivera (Fleetwise AE)), due 2026-11-12.",
+          "2026-11-12",
+          "222681.01078878215",
+          "open",
+          "Solis Construction - Vehicle Telematics + 1 New Business",
+          "Solis Construction"
+        ],
+        [
+          "aedf2b2958302c403059eebcb65ed700f337205f388854918de68bbf37b133b6",
+          "competitor_expiring",
+          "Counter RoadLynx before the quarter closes",
+          "Competitor RoadLynx is in the deal and it closes 2026-12-30 (this quarter); a competitor quote expires 2026-12-04.",
+          "2026-12-04",
+          "222681.01078878215",
+          "open",
+          "Solis Construction - Vehicle Telematics + 1 New Business",
+          "Solis Construction"
+        ],
+        [
+          "aa9ab4801531c068c63bb3ae77aabd1900333f75e1383ab0d25fe89d52891f78",
+          "call_next_step",
+          "Set up the integration with the customer's maintenance system during onboarding",
+          "Agreed on the 2026-10-29 call (owner: Albert Harris (Fleetwise Sales Engineer)).",
+          null,
+          "148454.00719252144",
+          "open",
+          "Solis Construction - Vehicle Telematics + 1 New Business",
+          "Solis Construction"
+        ]
+      ],
+      "row_count": 5
+    },
+    {
+      "id": "q8",
+      "question": "Which of my accounts have the most whitespace products?",
+      "passed": true,
+      "reason": "20 row(s)",
+      "status": "COMPLETED",
+      "latency_s": 16.3,
+      "sql": "SELECT\n  `account_name`,\n  `account_id`,\n  size(`whitespace_products`) AS `whitespace_product_count`,\n  `whitespace_products`\nFROM `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_account_360`\nWHERE `whitespace_products` IS NOT NULL\n  AND `account_name` IS NOT NULL\nORDER BY `whitespace_product_count` DESC, `account_name` ASC\nLIMIT 25",
+      "text": "Your accounts with the **most whitespace products** in this result set each have **6** whitespace products. Examples include:\n- **Blue Heron Distribution** \u2014 **6**\n- **Elm Crossing Housing Authority** \u2014 **6**\n- **Foxborough Dairy** \u2014 **6**\n- **Granite Falls Distribution** \u2014 **6**\n- **Great Plains Civil Group** \u2014 **6**\nAcross the **20 accounts shown**, the whitespace product count ranges from **4 to 6**, with **14 accounts** tied for the highest count.",
+      "columns": [
+        "account_name",
+        "account_id",
+        "whitespace_product_count",
+        "whitespace_products"
+      ],
+      "rows": [
+        [
+          "Blue Heron Distribution",
+          "0010g0000000001AAA",
+          "6",
+          "[\"Vehicle Telematics\",\"AI Dash Cams\",\"Driver Safety\",\"Fuel & Maintenance\",\"Compliance/ELD\",\"Equipment Monitoring\"]"
+        ],
+        [
+          "Elm Crossing Housing Authority",
+          "0010g0000000008AAA",
+          "6",
+          "[\"Vehicle Telematics\",\"AI Dash Cams\",\"Driver Safety\",\"Fuel & Maintenance\",\"Compliance/ELD\",\"Equipment Monitoring\"]"
+        ],
+        [
+          "Foxborough Dairy",
+          "0010g000000000DAAQ",
+          "6",
+          "[\"Vehicle Telematics\",\"AI Dash Cams\",\"Driver Safety\",\"Fuel & Maintenance\",\"Compliance/ELD\",\"Equipment Monitoring\"]"
+        ],
+        [
+          "Granite Falls Distribution",
+          "0010g0000000004AAA",
+          "6",
+          "[\"Vehicle Telematics\",\"AI Dash Cams\",\"Driver Safety\",\"Fuel & Maintenance\",\"Compliance/ELD\",\"Equipment Monitoring\"]"
+        ],
+        [
+          "Great Plains Civil Group",
+          "0010g000000000GAAQ",
+          "6",
+          "[\"Vehicle Telematics\",\"AI Dash Cams\",\"Driver Safety\",\"Fuel & Maintenance\",\"Compliance/ELD\",\"Equipment Monitoring\"]"
+        ]
+      ],
+      "row_count": 20
+    },
+    {
+      "id": "q9",
+      "question": "How many open leads are routed to each segment, and what is their average fit score?",
+      "passed": true,
+      "reason": "3 row(s)",
+      "status": "COMPLETED",
+      "latency_s": 14.1,
+      "sql": "SELECT\n  `route_to` AS `segment`,\n  COUNT(*) AS `open_leads`,\n  AVG(`fit_score`) AS `avg_fit_score`\nFROM `serverless_stable_s1omq8_catalog`.`seller_superapp`.`gold_lead_scores`\nWHERE `route_to` IS NOT NULL\n  AND `fit_score` IS NOT NULL\nGROUP BY `route_to`\nORDER BY `open_leads` DESC, `segment`",
+      "text": "There are **3 segments** with open leads routed: **SMB** has **1,310** open leads with an average fit score of **0.83**, **Mid-Market** has **1,021** with **0.85**, and **Enterprise** has **235** with **0.87**. Among these segments, **SMB** has the highest lead volume, while **Enterprise** has the highest average fit score.",
+      "columns": [
+        "segment",
+        "open_leads",
+        "avg_fit_score"
+      ],
+      "rows": [
+        [
+          "SMB",
+          "1310",
+          "0.8253237799422265"
+        ],
+        [
+          "Mid-Market",
+          "1021",
+          "0.8514553856183434"
+        ],
+        [
+          "Enterprise",
+          "235",
+          "0.8732055131360428"
+        ]
+      ],
+      "row_count": 3
+    },
+    {
+      "id": "q10",
+      "question": "How does customer sentiment break down across my calls?",
+      "passed": true,
+      "reason": "2 row(s)",
+      "status": "COMPLETED",
+      "latency_s": 14.1,
+      "sql": "SELECT `sentiment`, COUNT(*) AS `call_count`, ROUND(try_divide(100.0 * COUNT(*),SUM(COUNT(*)) OVER ()), 2) AS `pct_of_calls`\nFROM `serverless_stable_s1omq8_catalog`.`seller_superapp`.`v_call_insights`\nWHERE `extract_error` IS NULL\n  AND `sentiment` IS NOT NULL\nGROUP BY `sentiment`\nORDER BY `call_count` DESC, `sentiment`",
+      "text": "Across your calls with captured sentiment, **positive** sentiment is more common than **neutral**: **10 calls (58.82%)** were positive and **7 calls (41.18%)** were neutral. In the **17 calls** with sentiment available, there were **no other sentiment categories** shown.",
+      "columns": [
+        "sentiment",
+        "call_count",
+        "pct_of_calls"
+      ],
+      "rows": [
+        [
+          "positive",
+          "10",
+          "58.82"
+        ],
+        [
+          "neutral",
+          "7",
+          "41.18"
+        ]
+      ],
+      "row_count": 2
+    }
+  ],
+  "passed": 9
+}

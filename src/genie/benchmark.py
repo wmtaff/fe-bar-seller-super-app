@@ -26,9 +26,11 @@ from common import GENIE_DIR, ROOT, SPACE_ID_FILE, TITLE, default, workspace_cli
 QUESTIONS_FILE = GENIE_DIR / "benchmark_questions.yaml"
 RUNS_DIR = ROOT / "evidence" / "08_genie_runs"
 EVIDENCE = ROOT / "evidence" / "08_genie.md"
+NOTES = RUNS_DIR / "notes.md"  # hand-written analysis appended to the generated evidence
 TERMINAL = {"COMPLETED", "FAILED", "CANCELLED", "QUERY_RESULT_EXPIRED"}
 PASS_TARGET = 8
 CELL_MAX = 60
+TEXT_MAX = 500
 
 
 # --------------------------------------------------------------------------- pure helpers
@@ -98,6 +100,11 @@ def _cell(v) -> str:
     return s if len(s) <= CELL_MAX else s[: CELL_MAX - 1] + "…"
 
 
+def _quote(text: str, limit: int = TEXT_MAX) -> str:
+    s = " ".join(text.split())
+    return s if len(s) <= limit else s[: limit - 1] + "…"
+
+
 def md_table(cols: list[str], rows: list[list], limit: int = 5) -> str:
     if not cols:
         return "_(no result)_"
@@ -133,7 +140,7 @@ def render_markdown(runs: list[dict], target: int = PASS_TARGET) -> str:
                     f"**{'PASS' if r['passed'] else 'FAIL'}** ({r['reason']}). Status {r['status']}, "
                     f"latency {r['latency_s']:.1f} s, {r['row_count']} row(s).", ""]
             if r.get("text"):
-                out += [f"> {_cell(r['text']) if len(r['text']) > 400 else r['text'].replace(chr(10), ' ')}", ""]
+                out += ["> " + _quote(r["text"]), ""]
             out += ["```sql", (r.get("sql") or "-- no SQL").strip(), "```", "", md_table(r["columns"], r["rows"])]
     return "\n".join(out) + "\n"
 
@@ -183,16 +190,28 @@ def persona_context(w, warehouse_id: str, catalog: str, schema: str) -> tuple[st
     return rows[0][0], rows[0][1], {r[2]: r[3] for r in rows if r[2]}
 
 
+def write_evidence() -> None:
+    runs = [json.loads(p.read_text()) for p in sorted(RUNS_DIR.glob("run*.json"), key=lambda p: int(p.stem[3:]))]
+    notes = "\n" + NOTES.read_text() if NOTES.exists() else ""
+    EVIDENCE.write_text(render_markdown(runs) + notes)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--run-label", required=True)
+    ap.add_argument("--run-label", help="required unless --render-only")
     ap.add_argument("--note", default="", help="free text recorded with the run (e.g. what was tuned)")
     ap.add_argument("--catalog", default=default("catalog", "FLEETWISE_CATALOG"))
     ap.add_argument("--schema", default=default("schema", "FLEETWISE_SCHEMA"))
     ap.add_argument("--warehouse-id", default=default("warehouse_id", "FLEETWISE_WAREHOUSE_ID"))
     ap.add_argument("--profile", default=default("profile", "DATABRICKS_CONFIG_PROFILE"))
     ap.add_argument("--space-id", default=None, help=f"default: {SPACE_ID_FILE.name}")
+    ap.add_argument("--render-only", action="store_true", help="rebuild the markdown from saved runs")
     args = ap.parse_args(argv)
+    if args.render_only:
+        write_evidence()
+        return 0
+    if not args.run_label:
+        ap.error("--run-label is required")
     space_id = args.space_id or SPACE_ID_FILE.read_text().strip()
     w = workspace_client(args.profile)
     caller, persona, opps = persona_context(w, args.warehouse_id, args.catalog, args.schema)
@@ -220,8 +239,7 @@ def main(argv=None) -> int:
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     n = len(list(RUNS_DIR.glob("run*.json"))) + 1
     (RUNS_DIR / f"run{n}.json").write_text(json.dumps(run, indent=2, default=str) + "\n")
-    runs = [json.loads(p.read_text()) for p in sorted(RUNS_DIR.glob("run*.json"), key=lambda p: int(p.stem[3:]))]
-    EVIDENCE.write_text(render_markdown(runs))
+    write_evidence()
     print(f"{run['passed']}/{len(run['results'])} passed -> {EVIDENCE.relative_to(ROOT)}")
     return 0 if run["passed"] >= PASS_TARGET else 1
 
