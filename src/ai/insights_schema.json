@@ -1,0 +1,115 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "summary",
+    "next_steps",
+    "open_items",
+    "interests",
+    "competitors",
+    "objections",
+    "sentiment",
+    "stakeholders"
+  ],
+  "properties": {
+    "summary": {
+      "type": "string"
+    },
+    "next_steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "action",
+          "owner",
+          "due"
+        ],
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "string"
+          },
+          "due": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "open_items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "interests": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Vehicle Telematics",
+          "AI Dash Cams",
+          "Driver Safety",
+          "Fuel & Maintenance",
+          "Compliance/ELD",
+          "Equipment Monitoring"
+        ]
+      }
+    },
+    "competitors": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "objections": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sentiment": {
+      "type": "string",
+      "enum": [
+        "positive",
+        "neutral",
+        "negative"
+      ]
+    },
+    "stakeholders": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "role",
+          "stance"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string"
+          },
+          "stance": {
+            "type": "string",
+            "enum": [
+              "champion",
+              "supportive",
+              "neutral",
+              "skeptical",
+              "blocker"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

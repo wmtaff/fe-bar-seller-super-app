@@ -54,13 +54,15 @@ def test_rebuild_safe_merge_and_orphan_delete():
 
 
 def test_no_attendee_emails_in_gold():
-    ddl = SQL.split("CREATE TABLE IF NOT EXISTS gold_call_insights", 1)[1].split(";", 1)[0]
+    ddl = SQL.split("CREATE TABLE IF NOT EXISTS gold_call_insights", 1)[1].split("TBLPROPERTIES", 1)[0]
     assert "attendees" not in ddl.lower()
     assert "attendees" not in SQL.split("MERGE INTO", 1)[1].lower()
+    # the prompt may use the attendee roster (name/role/company) but never the raw email field
+    assert not re.search(r"\.email\b", SQL, flags=re.I)
 
 
 def test_target_columns_have_comments():
-    ddl = SQL.split("CREATE TABLE IF NOT EXISTS gold_call_insights", 1)[1].split(";", 1)[0]
+    ddl = SQL.split("CREATE TABLE IF NOT EXISTS gold_call_insights", 1)[1].split("TBLPROPERTIES", 1)[0]
     cols = re.findall(r"^\s+(\w+) [A-Z<]", ddl, flags=re.M)
     expected = ["meeting_id", "opportunity_id", "account_id", "started_at", "summary", "next_steps",
                 "open_items", "interests", "competitors", "objections", "sentiment", "stakeholders",
