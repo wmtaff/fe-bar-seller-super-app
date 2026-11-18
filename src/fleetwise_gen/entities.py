@@ -273,7 +273,7 @@ def _pick_products(rng: random.Random, owned: set[str], opp_type: str) -> list[s
     else:
         first = [rng.choice(pool)]
     extra = [p for p in pool if p not in first]
-    k = min(len(extra), rng.choice([0, 0, 1, 1, 2]))
+    k = min(len(extra), rng.choice(C.OPP_EXTRA_PRODUCTS))
     chosen = set(first) | set(rng.sample(extra, k))
     return [p for p in C.PRODUCTS if p in chosen]
 
@@ -286,14 +286,16 @@ def _competitors(rng: random.Random, intent: float) -> list[str]:
 
 
 def _new_opp(w: World, idx: int, acc: dict, intent: float, opp_type: str, products: list[str],
-             coverage: float, rng: random.Random) -> dict:
+             coverage: float, rng: random.Random, u_win: float | None = None) -> dict:
+    if u_win is None:
+        u_win = rng.random()
     fleet_scope = max(5, int(acc["Fleet_Size__c"] * coverage))
     comps = _competitors(rng, intent)
     return {
         "idx": idx, "Id": sfid("Opportunity", idx, w.seed), "AccountId": acc["Id"],
         "OwnerId": acc["OwnerId"], "Type": opp_type, "products": products,
         "Amount": _amount(acc["Fleet_Size__c"], products, coverage), "fleet_in_scope": fleet_scope,
-        "intent": round(intent, 4), "will_win": rng.random() < _p_win(intent, opp_type),
+        "intent": round(intent, 4), "will_win": u_win < _p_win(intent, opp_type),
         "competitors": comps,
         "crm_competitor": comps[0] if comps and rng.random() < 0.55 else None,
         "quote": None, "LeadSource": rng.choice(N.OPP_LEAD_SOURCES),
@@ -308,6 +310,53 @@ def _quote(rng: random.Random, comp: str, products: list[str], lo: date, hi: dat
             "expires_on": (lo + timedelta(days=rng.randint(0, days))).isoformat()}
 
 
+class _Rotation:
+    """Smooth weighted round-robin over sellers (ruling R13).
+
+    Each seller's weight is SEGMENT_DEAL_WEIGHT of their segment, so SMB sellers run more,
+    smaller deals. Consecutive picks cycle through all sellers, so when deals are drawn in
+    close-date order every seller gets an even share of deals in every quarter instead of a
+    Poisson count, which keeps quarterly attainment and coverage plausible.
+    """
+
+    def __init__(self, w: World, exclude: tuple[str, ...] = ()):
+        self.owners = sorted({a["OwnerId"] for a in w.accounts} - set(exclude))
+        self.wts = [C.SEGMENT_DEAL_WEIGHT[w.user_by_id[u]["Segment__c"]] for u in self.owners]
+        self.total = sum(self.wts)
+        self.cur = [0.0] * len(self.owners)
+
+    def next(self) -> str:
+        for i, x in enumerate(self.wts):
+            self.cur[i] += x
+        k = max(range(len(self.owners)), key=lambda i: (self.cur[i], -i))
+        self.cur[k] -= self.total
+        return self.owners[k]
+
+
+def _seed_jordan_qtd_win(w: World, since: dict[str, date]) -> None:
+    """Persona (ruling R13): Jordan has one Closed Won deal this fiscal quarter.
+
+    Takes Jordan's recent won deal (last 200 days, the latest opp on its account) whose ACV is
+    closest to JORDAN_QTD_WON_ACV and moves its whole timeline so it closes on
+    JORDAN_QTD_WON_DATE (FY27Q4), giving a quarter-to-date attainment of ~30%.
+    """
+    last_close: dict[str, date] = {}
+    for o in w.opps:
+        last_close[o["AccountId"]] = max(last_close.get(o["AccountId"], o["close"]), o["close"])
+    target = date.fromisoformat(C.JORDAN_QTD_WON_DATE)
+    cands = [o for o in w.opps if o["OwnerId"] == w.jordan_id and o["IsWon"]
+             and o["close"] >= C.AS_OF_DATE - timedelta(days=200)
+             and o["close"] == last_close[o["AccountId"]]]
+    o = min(cands, key=lambda o: (abs(o["Amount"] - C.JORDAN_QTD_WON_ACV), o["idx"]))
+    delta = target - o["close"]
+    if since.get(o["AccountId"]) == o["close"]:
+        since[o["AccountId"]] = target
+    o.update(created=o["created"] + delta, close=target, snapshot=o["snapshot"] + delta,
+             last_modified=dts(target, 22))
+    if o["quote"]:
+        o["quote"]["expires_on"] = (date.fromisoformat(o["quote"]["expires_on"]) + delta).isoformat()
+
+
 def _build_opps(w: World) -> None:
     seed = w.seed
     rng = rng_for(seed, "opps")
@@ -316,28 +365,37 @@ def _build_opps(w: World) -> None:
     arr: dict[str, int] = {a["Id"]: 0 for a in w.accounts}
     since: dict[str, date] = {}
     jordan_accounts = [a for a in w.accounts if a["OwnerId"] == w.jordan_id]
-    other_accounts = [a for a in w.accounts if a["OwnerId"] != w.jordan_id]
+    # Deal owners (ruling R13): balanced per seller, weighted by segment deal volume; each deal
+    # then picks one of its seller's accounts.
+    by_owner: dict[str, list[dict]] = {}
+    for a in w.accounts:
+        by_owner.setdefault(a["OwnerId"], []).append(a)
+    deck_rng = rng_for(seed, "deck")
+    open_rot = _Rotation(w, exclude=(w.jordan_id,))
+    open_owners = [open_rot.next() for _ in range(C.N_OPEN_OPPS - C.JORDAN_OPEN_OPPS)]
+    deck_rng.shuffle(open_owners)
+    # closed deals: separate rotations for won and lost deals, so wins are spread evenly too
+    won_rot, lost_rot = _Rotation(w), _Rotation(w)
 
     # ---- closed opps, generated in close-date order per account so types make sense
-    closed_specs = []
-    for k in range(C.N_CLOSED_OPPS):
-        acc = rng.choice(w.accounts)
-        close = as_of - timedelta(days=1 + int(729 * rng.random() ** 1.15))
-        closed_specs.append((close, k, acc))
-    closed_specs.sort(key=lambda x: (x[0], x[1]))
+    closes = sorted(as_of - timedelta(days=1 + int(729 * rng.random() ** 1.15))
+                    for _ in range(C.N_CLOSED_OPPS))
     idx = 0
-    for close, _, acc in closed_specs:
+    for close in closes:
+        intent = beta(rng, 2, 2)
+        u_win = rng.random()
+        rot = won_rot if u_win < _p_win(intent, "New Business") else lost_rot
+        acc = deck_rng.choice(by_owner[rot.next()])
         seg = acc["Segment__c"]
         lo, hi = C.SEGMENT_CYCLE_DAYS[seg]
         cycle = rng.randint(lo, hi)
-        intent = beta(rng, 2, 2)
         if owned[acc["Id"]]:
             opp_type = "Renewal" if rng.random() < 0.45 else "Expansion"
         else:
             opp_type = "New Business"
         products = _pick_products(rng, owned[acc["Id"]], opp_type)
-        coverage = 1.0 if opp_type == "Renewal" else rng.uniform(0.35, 1.0)
-        o = _new_opp(w, idx, acc, intent, opp_type, products, coverage, rng)
+        coverage = 1.0 if opp_type == "Renewal" else rng.uniform(*C.OPP_FLEET_COVERAGE)
+        o = _new_opp(w, idx, acc, intent, opp_type, products, coverage, rng, u_win=u_win)
         idx += 1
         created = close - timedelta(days=cycle)
         o.update(created=created, close=close, snapshot=created + timedelta(days=round(0.6 * cycle)),
@@ -363,6 +421,8 @@ def _build_opps(w: World) -> None:
             o["path_len"] = rng.randint(1, len(C.OPEN_STAGES))
         w.opps.append(o)
 
+    _seed_jordan_qtd_win(w, since)
+
     # account firmographics derived from closed history
     for a in w.accounts:
         if owned[a["Id"]]:
@@ -384,7 +444,7 @@ def _build_opps(w: World) -> None:
             acc = jordan_accounts[j % len(jordan_accounts)]
             intent = jordan_intents[j]
         else:
-            acc = rng.choice(other_accounts)
+            acc = deck_rng.choice(by_owner[open_owners[j - C.JORDAN_OPEN_OPPS]])
             intent = beta(rng, 2, 2)
         is_cust = acc["Type"] == "Customer"
         opp_type = ("Renewal" if rng.random() < 0.4 else "Expansion") if is_cust else "New Business"
@@ -398,7 +458,8 @@ def _build_opps(w: World) -> None:
             taken = owned[acc["Id"]]
         products = _pick_products(rng, taken if opp_type != "Renewal" else owned[acc["Id"]], opp_type)
         open_products[acc["Id"]] |= set(products)
-        coverage = 1.0 if opp_type == "Renewal" else rng.uniform(0.35, 1.0)
+        cov_range = C.JORDAN_OPP_COVERAGE if j < C.JORDAN_OPEN_OPPS else C.OPP_FLEET_COVERAGE
+        coverage = 1.0 if opp_type == "Renewal" else rng.uniform(*cov_range)
         o = _new_opp(w, idx, acc, intent, opp_type, products, coverage, rng)
         idx += 1
         seg = acc["Segment__c"]
@@ -465,34 +526,28 @@ def opp_row(w: World, o: dict, last_modified: str | None = None) -> dict:
 
 
 def _calibrate_quotas(w: World) -> None:
-    """Set seller quotas from each territory's current-quarter position (ruling R12).
+    """Annual quota from each seller's trailing closed-won history (ruling R13).
 
-    Deal sizes vary a lot by segment and each seller has only a few deals, so a flat
-    segment quota gives implausible pipeline coverage (0.3x for SMB, 6x+ for Enterprise).
-    Like a territory plan, each seller's quarterly quota = current-quarter closed-won ACV +
-    open current-quarter pipeline / a target coverage drawn from 1.9x..3.6x. Sellers with no
-    current-quarter pipeline keep the segment default; personas keep their fixed quotas.
-    Managers and RVPs get the roll-up of their team.
+    quota = clamp(closed-won ACV over the trailing 4 fiscal quarters x QUOTA_GROWTH,
+                  QUOTA_MIN_X x SEGMENT_QUOTA, QUOTA_MAX_X x SEGMENT_QUOTA),
+    with SEGMENT_QUOTA when the seller has no closed-won history. Jordan and Taylor keep
+    their pinned quotas. Managers and RVPs get the roll-up of their team. The quota never
+    looks at open pipeline, so coverage is an outcome, not a fitted value.
     """
-    rng = rng_for(w.seed, "quota")
-    q_start, q_end = date.fromisoformat(C.CURRENT_FQ_START), date.fromisoformat(C.CURRENT_FQ_END)
+    lo, hi = date.fromisoformat(C.TRAILING_4Q_START), date.fromisoformat(C.TRAILING_4Q_END)
     won: dict[str, int] = {}
-    open_: dict[str, int] = {}
     for o in w.opps:
-        if not (q_start <= o["close"] <= q_end):
-            continue
-        if o["IsClosed"] and o["IsWon"]:
+        if o["IsClosed"] and o["IsWon"] and lo <= o["close"] <= hi:
             won[o["OwnerId"]] = won.get(o["OwnerId"], 0) + o["Amount"]
-        elif not o["IsClosed"]:
-            open_[o["OwnerId"]] = open_.get(o["OwnerId"], 0) + o["Amount"]
     for u in w.users:
-        if not u["Title"].endswith("Account Executive"):
+        if not u["Title"].endswith("Account Executive") or u["Id"] in (w.jordan_id, w.taylor_id):
             continue
-        target = rng.uniform(1.9, 3.6)
-        if u["Id"] in (w.jordan_id, w.taylor_id) or not open_.get(u["Id"]):
+        seg_q = C.SEGMENT_QUOTA[u["Segment__c"]]
+        if u["Id"] not in won:
+            u["Quota__c"] = seg_q
             continue
-        quarterly = won.get(u["Id"], 0) + open_[u["Id"]] / target
-        u["Quota__c"] = max(C.MIN_ANNUAL_QUOTA, int(round(4 * quarterly, -4)))
+        q = won[u["Id"]] * C.QUOTA_GROWTH
+        u["Quota__c"] = int(round(min(C.QUOTA_MAX_X * seg_q, max(C.QUOTA_MIN_X * seg_q, q)), -4))
     for m in w.users:
         if m["Title"] == "Sales Manager":
             m["Quota__c"] = sum(u["Quota__c"] for u in w.users if u["ManagerId"] == m["Id"])

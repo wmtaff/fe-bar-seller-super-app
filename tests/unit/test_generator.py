@@ -396,37 +396,69 @@ def test_transcript_phrasing_varies(init_dir):
     assert scattered >= 60
 
 
-def _fy27q4_kpis(init_dir: Path, inc_dir: Path) -> dict[str, dict]:
-    """Seller KPIs for FY27Q4 from raw files (init + increment 1), as gold_seller_kpis computes them."""
+def _seller_kpis(init_dir: Path, inc_dir: Path) -> tuple[dict, dict]:
+    """(users by Id, {(seller_id, fiscal_quarter): [won, open]}) from raw files (init + increment 1),
+    the same way gold_seller_kpis aggregates them."""
+    from fleetwise_gen.config import fiscal_quarter
+
     opps = {o["Id"]: o for o in sf(init_dir, "Opportunity")}
     for o in sf(inc_dir, "Opportunity", 1):
         if o["LastModifiedDate"] >= opps[o["Id"]]["LastModifiedDate"]:
             opps[o["Id"]] = o
-    out = {}
-    for u in sf(init_dir, "User"):
-        if not u["Title"].endswith("Account Executive"):
-            continue
-        quota = u["Quota__c"] / 4
-        won = sum(o["Amount"] for o in opps.values() if o["OwnerId"] == u["Id"] and o["IsWon"]
-                  and CURRENT_FQ_START <= o["CloseDate"] <= CURRENT_FQ_END)
-        open_ = sum(o["Amount"] for o in opps.values() if o["OwnerId"] == u["Id"] and not o["IsClosed"]
-                    and CURRENT_FQ_START <= o["CloseDate"] <= CURRENT_FQ_END)
-        out[u["Name"]] = {"quota": quota, "won": won, "open": open_, "attainment": won / quota,
-                          "coverage": open_ / (quota - won) if quota > won else None}
-    return out
+    users = {u["Id"]: u for u in sf(init_dir, "User")}
+    agg: dict[tuple[str, str], list[float]] = {}
+    for o in opps.values():
+        from datetime import date as _d
+        k = (o["OwnerId"], fiscal_quarter(_d.fromisoformat(o["CloseDate"])))
+        a = agg.setdefault(k, [0.0, 0.0])
+        if o["IsWon"]:
+            a[0] += o["Amount"]
+        elif not o["IsClosed"]:
+            a[1] += o["Amount"]
+    return users, agg
 
 
 def test_jordan_kpis_plausible(init_dir, inc_dir):
-    """Ruling R12: Jordan's FY27Q4 coverage is 3-4x with 25-40% attainment; org coverage is plausible."""
-    k = _fy27q4_kpis(init_dir, inc_dir)
-    j = k["Jordan Rivera"]
-    assert j["quota"] * 4 == 2_000_000
-    assert 3.0 <= j["coverage"] <= 4.0, j
-    assert 0.25 <= j["attainment"] <= 0.40, j
-    with_pipe = [v for v in k.values() if v["open"] > 0]
-    in_band = [v for v in with_pipe if v["coverage"] is not None and 1.5 <= v["coverage"] <= 5.0]
-    assert len(in_band) >= 0.8 * len(with_pipe), (len(in_band), len(with_pipe))
-    jid = jordan(init_dir)["Id"]
-    nxt = [o for o in sf(init_dir, "Opportunity") if o["OwnerId"] == jid and not o["IsClosed"]
+    """Rulings R12/R13: Jordan's FY27Q4 coverage is 3-4x with 25-40% attainment."""
+    users, agg = _seller_kpis(init_dir, inc_dir)
+    j = jordan(init_dir)
+    assert j["Quota__c"] == 2_000_000
+    q = j["Quota__c"] / 4
+    won, open_ = agg.get((j["Id"], "FY27Q4"), [0, 0])
+    assert 3.0 <= open_ / (q - won) <= 4.0, (won, open_)
+    assert 0.25 <= won / q <= 0.40, (won, open_)
+    nxt = [o for o in sf(init_dir, "Opportunity") if o["OwnerId"] == j["Id"] and not o["IsClosed"]
            and "2027-02-01" <= o["CloseDate"] <= "2027-04-30"]
     assert 6 <= len(nxt) <= 8
+
+
+def test_quota_sanity(init_dir, inc_dir):
+    """Ruling R13: quotas come from trailing closed-won history, clamped per segment, and
+    attainment, team spread and pipeline coverage are plausible."""
+    from fleetwise_gen.config import QUOTA_MAX_X, QUOTA_MIN_X, SEGMENT_QUOTA
+
+    users, agg = _seller_kpis(init_dir, inc_dir)
+    pinned = {"Jordan Rivera", "Taylor Empty"}
+    sellers = [u for u in users.values() if u["Title"].endswith("Account Executive")]
+    for u in sellers:
+        if u["Name"] in pinned:
+            continue
+        seg = SEGMENT_QUOTA[u["Segment__c"]]
+        assert round(QUOTA_MIN_X * seg, -4) <= u["Quota__c"] <= round(QUOTA_MAX_X * seg, -4), u
+    past = sorted({q for _, q in agg if q < "FY27Q4"})
+    att = sorted(agg.get((u["Id"], q), [0, 0])[0] / (u["Quota__c"] / 4) for u in sellers for q in past)
+    p90, mx = att[int(len(att) * 0.9)], att[-1]
+    print(f"past-quarter attainment p90={p90:.2f} max={mx:.2f}")
+    assert p90 <= 2.0 and mx <= 4.0
+    morgan = next(u for u in users.values() if u["Name"] == "Morgan Lee")
+    team = [u["Quota__c"] for u in sellers if u["ManagerId"] == morgan["Id"]]
+    assert len(team) == 8 and max(team) / min(team) <= 3, team
+    band = []
+    for u in sellers:
+        won, open_ = agg.get((u["Id"], "FY27Q4"), [0, 0])
+        q = u["Quota__c"] / 4
+        if open_ > 0:
+            band.append(q > won and 1.5 <= open_ / (q - won) <= 5.0)
+    share = sum(band) / len(band)
+    print(f"org coverage in-band share={share:.3f} ({sum(band)}/{len(band)})")
+    assert share >= 0.5

@@ -96,7 +96,15 @@ REGION_STATES = {
     "Central": ["TX", "IL", "OH", "MN", "MO", "OK", "KS", "WI"],
     "East": ["NY", "NJ", "PA", "GA", "FL", "NC", "VA", "MA"],
 }
-SEGMENT_FLEET = {"SMB": (12, 80), "Mid-Market": (80, 600), "Enterprise": (600, 6000)}
+# Fleet sizes and deal volume per segment are tuned (ruling R13) so that a seller's closed-won
+# ACV over a year is roughly their segment quota / 1.2.
+SEGMENT_FLEET = {"SMB": (150, 300), "Mid-Market": (380, 760), "Enterprise": (700, 1400)}
+# Relative deal volume per seller of this segment (smooth weighted round-robin over sellers).
+SEGMENT_DEAL_WEIGHT = {"SMB": 3.0, "Mid-Market": 2.75, "Enterprise": 3.0}
+# Share of the account's fleet in scope for a New Business / Expansion opp (Renewal = 1.0).
+OPP_FLEET_COVERAGE = (0.8, 1.0)
+# Extra products beyond the first on a New Business / Expansion opp (drawn uniformly).
+OPP_EXTRA_PRODUCTS = [0, 0, 0, 0, 1]
 SEGMENT_CYCLE_DAYS = {"SMB": (20, 60), "Mid-Market": (45, 120), "Enterprise": (90, 220)}
 SEGMENT_QUOTA = {"SMB": 600_000, "Mid-Market": 1_100_000, "Enterprise": 2_000_000}
 
@@ -122,11 +130,21 @@ JORDAN_OPEN_OPPS = 25
 JORDAN_TRANSCRIBED_OPPS = 10
 JORDAN_QUOTE_OPPS = 3
 JORDAN_QUOTA = 2_000_000  # annual (ruling R12)
+# Jordan persona economics (ruling R13): his open deals are phased rollouts (25-40% of the
+# fleet in scope), and one ~$165k deal closed won this quarter (attainment ~30%).
+JORDAN_OPP_COVERAGE = (0.25, 0.4)
+JORDAN_QTD_WON_ACV = 165_000
+JORDAN_QTD_WON_DATE = "2026-11-06"
 # Indices of Jordan's 25 open opps that close in FY28Q1; the other 18 close in FY27Q4, giving
-# FY27Q4 coverage ~3.5x (ruling R12). Transcribed opps are j < 10 and quote opps j < 3, so 9
-# transcribed and 2 quote opps (j 0, 1) stay in FY27Q4.
-JORDAN_NEXT_Q_OPPS = (2, 11, 13, 16, 17, 21, 23)
-MIN_ANNUAL_QUOTA = 40_000
+# FY27Q4 coverage ~3.5x (rulings R12, R13). Transcribed opps are j < 10 and quote opps j < 3,
+# so all 10 transcribed and all 3 quote opps stay in FY27Q4.
+JORDAN_NEXT_Q_OPPS = (12, 13, 14, 16, 17, 18, 23)
+# Quota (ruling R13): clamp(trailing-4-fiscal-quarter closed-won ACV x 1.2, 0.6x, 1.8x SEGMENT_QUOTA).
+QUOTA_GROWTH = 1.2
+QUOTA_MIN_X = 0.6
+QUOTA_MAX_X = 1.8
+TRAILING_4Q_START = "2025-11-01"  # FY26Q4 .. FY27Q3
+TRAILING_4Q_END = "2026-10-31"
 
 
 def batch_ts(batch: int) -> datetime:
