@@ -7,3 +7,4 @@
 - [ ] **Before submitting:** confirm the FE Bar form can read the private repo (connect GitHub on the form). If it can't, make it public after a scrub.
 - Warehouses: use **Demo Warehouse `9a6db1d12e2ee6d3`** for SQL, Genie, and the app. The RT Warehouse is out of scope and rejects AI functions.
   The Serverless Starter Warehouse was failing to launch.
+- [ ] **Roleplay docs (Google Docs; links in docs/roleplay/GOOGLE_DOCS.md):** fill the 14 `[[placeholders]]` from evidence once Tasks 6–11 land. Re-check Jordan's KPIs after the R12 quota fix. Frame AUC as "pipeline works against planted truth", not real-world accuracy. Name Postgres RLS as the production path for Lakebase scoping, and call the persona switcher demo-only.
