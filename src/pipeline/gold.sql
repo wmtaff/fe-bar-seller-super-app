@@ -7,8 +7,19 @@
 
 -- --------------------------------------------------------------------------- helpers
 CREATE TEMPORARY VIEW data_as_of AS
-SELECT max(last_modified_date) AS as_of_ts, to_date(max(last_modified_date)) AS as_of_date
-FROM silver_opportunities;
+SELECT as_of_ts, as_of_date,
+  concat('FY', lpad(CAST(pmod(year(add_months(as_of_date, 11)), 100) AS STRING), 2, '0'),
+         'Q', CAST(floor(pmod(month(as_of_date) - 2, 12) / 3) + 1 AS STRING)) AS current_fq
+FROM (SELECT max(last_modified_date) AS as_of_ts, to_date(max(last_modified_date)) AS as_of_date
+      FROM silver_opportunities);
+
+-- Completed activities only: Tasks with Status = 'Completed' (open Tasks are scheduled in the
+-- future) and Events (meetings, no status field) that started by the as-of time.
+CREATE TEMPORARY VIEW completed_activities AS
+SELECT a.*
+FROM silver_activities a CROSS JOIN data_as_of d
+WHERE a.activity_at <= d.as_of_ts
+  AND (a.activity_object = 'Event' OR a.status = 'Completed');
 
 -- --------------------------------------------------------------------------- user hierarchy
 CREATE OR REFRESH MATERIALIZED VIEW gold_user_hierarchy (
@@ -78,9 +89,9 @@ CREATE OR REFRESH MATERIALIZED VIEW gold_opportunity_pipeline (
   lead_source STRING COMMENT 'Original lead source of the opportunity.',
   stage_age_days INT COMMENT 'Days since the opportunity entered its current stage, relative to the data as-of date.',
   days_to_close INT COMMENT 'close_date minus the data as-of date in days (negative = close date has passed).',
-  last_activity_at TIMESTAMP COMMENT 'Most recent completed call, email or meeting logged on the opportunity (null if none).',
+  last_activity_at TIMESTAMP COMMENT 'Most recent completed activity on the opportunity: a Task (call/email) with Status Completed or a meeting that started by the as-of time (null if none).',
   days_since_last_activity INT COMMENT 'Days from last_activity_at to the data as-of date.',
-  activities_30d INT COMMENT 'Number of activities on the opportunity in the 30 days up to the as-of date.',
+  activities_30d INT COMMENT 'Number of completed activities on the opportunity in the 30 days up to the as-of time.',
   competitor STRING COMMENT 'Competitor recorded in the CRM field (RoadLynx, FleetCore, Trackwell), often blank even when one is involved.',
   products ARRAY<STRING> COMMENT 'Fleetwise products on the opportunity.',
   primary_product STRING COMMENT 'First product on the opportunity.',
@@ -102,8 +113,8 @@ act AS (
   SELECT a.opportunity_id,
          max(a.activity_at) AS last_activity_at,
          count_if(a.activity_at > d.as_of_ts - INTERVAL 30 DAYS) AS activities_30d
-  FROM silver_activities a CROSS JOIN data_as_of d
-  WHERE a.opportunity_id IS NOT NULL AND a.activity_at <= d.as_of_ts
+  FROM completed_activities a CROSS JOIN data_as_of d
+  WHERE a.opportunity_id IS NOT NULL
   GROUP BY a.opportunity_id
 ),
 o AS (
@@ -113,10 +124,7 @@ o AS (
   FROM silver_opportunities o
 ),
 cur AS (
-  SELECT d.*,
-    concat('FY', lpad(CAST(pmod(year(add_months(d.as_of_date, 11)), 100) AS STRING), 2, '0'),
-           'Q', CAST(floor(pmod(month(d.as_of_date) - 2, 12) / 3) + 1 AS STRING)) AS current_fq
-  FROM data_as_of d
+  SELECT * FROM data_as_of
 )
 SELECT
   o.opportunity_id, o.opportunity_name, o.account_id, a.account_name,
@@ -171,7 +179,7 @@ CREATE OR REFRESH MATERIALIZED VIEW gold_account_360 (
   p1_tickets_30d INT COMMENT 'P1 (highest severity) support tickets created in the last 30 days.',
   open_opportunities INT COMMENT 'Number of open opportunities on the account.',
   open_pipeline_acv DOUBLE COMMENT 'Sum of ACV of open opportunities on the account (USD).',
-  last_activity_at TIMESTAMP COMMENT 'Most recent completed call, email or meeting with the account.'
+  last_activity_at TIMESTAMP COMMENT 'Most recent completed activity with the account: a Task (call/email) with Status Completed or a meeting that started by the as-of time.'
 )
 COMMENT 'Gold: account 360 - firmographics, ARR, products owned and whitespace, 30-day usage trend, support load, open pipeline and last touch. One row per account.'
 TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')
@@ -206,8 +214,7 @@ opps AS (
 ),
 act AS (
   SELECT a.account_id, max(a.activity_at) AS last_activity_at
-  FROM silver_activities a CROSS JOIN data_as_of d
-  WHERE a.activity_at <= d.as_of_ts
+  FROM completed_activities a
   GROUP BY a.account_id
 )
 SELECT
@@ -269,10 +276,11 @@ quarters AS (
   SELECT q.fiscal_quarter, q.is_current_quarter,
     -- FYyyQn labels sort chronologically as strings
     q.fiscal_quarter < c.current_fq AS is_past_quarter
-  FROM (SELECT fiscal_quarter, bool_or(is_current_quarter) AS is_current_quarter
-        FROM gold_opportunity_pipeline GROUP BY fiscal_quarter) q
-  CROSS JOIN (SELECT max(fiscal_quarter) AS current_fq FROM gold_opportunity_pipeline
-              WHERE is_current_quarter) c
+  FROM (SELECT fiscal_quarter, fiscal_quarter = current_fq AS is_current_quarter
+        FROM (SELECT fiscal_quarter FROM gold_opportunity_pipeline
+              UNION SELECT current_fq FROM data_as_of)
+        CROSS JOIN data_as_of) q
+  CROSS JOIN data_as_of c
 ),
 agg AS (
   SELECT owner_id, fiscal_quarter,
@@ -329,8 +337,9 @@ TBLPROPERTIES ('delta.enableChangeDataFeed' = 'true')
 AS SELECT
   c.contact_id, c.account_id, a.account_name, c.name, c.title, c.buyer_role,
   CASE WHEN c.email IS NULL THEN NULL
-       ELSE concat(left(c.email, 1), '***@', substring_index(c.email, '@', -1)) END AS email,
-  substring_index(c.email, '@', -1) AS email_domain,
+       WHEN c.email LIKE '%_@_%' THEN concat(left(c.email, 1), '***@', substring_index(c.email, '@', -1))
+       ELSE '***' END AS email,
+  CASE WHEN c.email LIKE '%_@_%' THEN substring_index(c.email, '@', -1) END AS email_domain,
   CASE WHEN c.phone IS NULL THEN NULL
        ELSE concat('***-***-', right(regexp_replace(c.phone, '[^0-9]', ''), 4)) END AS phone,
   CASE WHEN c.mobile_phone IS NULL THEN NULL

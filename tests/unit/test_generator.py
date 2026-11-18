@@ -394,3 +394,39 @@ def test_transcript_phrasing_varies(init_dir):
             assert not any(x.startswith("We've been on") for x in texts)
     assert len(acks) >= 5 and len(openers) >= 5
     assert scattered >= 60
+
+
+def _fy27q4_kpis(init_dir: Path, inc_dir: Path) -> dict[str, dict]:
+    """Seller KPIs for FY27Q4 from raw files (init + increment 1), as gold_seller_kpis computes them."""
+    opps = {o["Id"]: o for o in sf(init_dir, "Opportunity")}
+    for o in sf(inc_dir, "Opportunity", 1):
+        if o["LastModifiedDate"] >= opps[o["Id"]]["LastModifiedDate"]:
+            opps[o["Id"]] = o
+    out = {}
+    for u in sf(init_dir, "User"):
+        if not u["Title"].endswith("Account Executive"):
+            continue
+        quota = u["Quota__c"] / 4
+        won = sum(o["Amount"] for o in opps.values() if o["OwnerId"] == u["Id"] and o["IsWon"]
+                  and CURRENT_FQ_START <= o["CloseDate"] <= CURRENT_FQ_END)
+        open_ = sum(o["Amount"] for o in opps.values() if o["OwnerId"] == u["Id"] and not o["IsClosed"]
+                    and CURRENT_FQ_START <= o["CloseDate"] <= CURRENT_FQ_END)
+        out[u["Name"]] = {"quota": quota, "won": won, "open": open_, "attainment": won / quota,
+                          "coverage": open_ / (quota - won) if quota > won else None}
+    return out
+
+
+def test_jordan_kpis_plausible(init_dir, inc_dir):
+    """Ruling R12: Jordan's FY27Q4 coverage is 3-4x with 25-40% attainment; org coverage is plausible."""
+    k = _fy27q4_kpis(init_dir, inc_dir)
+    j = k["Jordan Rivera"]
+    assert j["quota"] * 4 == 2_000_000
+    assert 3.0 <= j["coverage"] <= 4.0, j
+    assert 0.25 <= j["attainment"] <= 0.40, j
+    with_pipe = [v for v in k.values() if v["open"] > 0]
+    in_band = [v for v in with_pipe if v["coverage"] is not None and 1.5 <= v["coverage"] <= 5.0]
+    assert len(in_band) >= 0.8 * len(with_pipe), (len(in_band), len(with_pipe))
+    jid = jordan(init_dir)["Id"]
+    nxt = [o for o in sf(init_dir, "Opportunity") if o["OwnerId"] == jid and not o["IsClosed"]
+           and "2027-02-01" <= o["CloseDate"] <= "2027-04-30"]
+    assert 6 <= len(nxt) <= 8

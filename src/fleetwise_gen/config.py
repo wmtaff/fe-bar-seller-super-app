@@ -121,6 +121,12 @@ TAYLOR = ("Taylor", "Empty")
 JORDAN_OPEN_OPPS = 25
 JORDAN_TRANSCRIBED_OPPS = 10
 JORDAN_QUOTE_OPPS = 3
+JORDAN_QUOTA = 2_000_000  # annual (ruling R12)
+# Indices of Jordan's 25 open opps that close in FY28Q1; the other 18 close in FY27Q4, giving
+# FY27Q4 coverage ~3.5x (ruling R12). Transcribed opps are j < 10 and quote opps j < 3, so 9
+# transcribed and 2 quote opps (j 0, 1) stay in FY27Q4.
+JORDAN_NEXT_Q_OPPS = (2, 11, 13, 16, 17, 21, 23)
+MIN_ANNUAL_QUOTA = 40_000
 
 
 def batch_ts(batch: int) -> datetime:

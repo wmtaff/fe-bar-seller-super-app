@@ -11,9 +11,9 @@ resources:
           default: init
         - name: batch
           default: "0"
-        # Output goes to /Volumes/<catalog>/<schema>/<volume>/<dataset_version>/ (ruling R10).
+        # Output goes to /Volumes/<catalog>/<schema>/<volume>/<dataset_version>/ (rulings R10, R12: v3).
         - name: dataset_version
-          default: v2
+          default: v3
       environments:
         - environment_key: generator_env
           spec:

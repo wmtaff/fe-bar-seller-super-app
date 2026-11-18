@@ -1,8 +1,15 @@
-"""Task 3: Lakeflow SDP pipeline (bronze -> silver -> gold) on live data in raw/v2."""
+"""Task 3: Lakeflow SDP pipeline (bronze -> silver -> gold) on live data in raw/<dataset_version>."""
+
+import os
+import re
+from pathlib import Path
 
 import pytest
 
 pytestmark = pytest.mark.integration
+
+DATASET_VERSION = os.environ.get("FLEETWISE_DATASET_VERSION", "v3")
+GOLD_SQL = Path(__file__).resolve().parents[2] / "src" / "pipeline" / "gold.sql"
 
 GOLD_TABLES = [
     "gold_user_hierarchy",
@@ -192,7 +199,8 @@ def test_no_ground_truth_ingested(sql, names):
     assert rows == []
     leaked = sql(
         f"SELECT count(*) AS n FROM {_fq(names, 'bronze_opportunity')} "
-        "WHERE _source_file LIKE '%/_eval/%' OR _source_file NOT LIKE '%/raw/v2/%'"
+        "WHERE _source_file LIKE '%/_eval/%' OR _source_file NOT LIKE :root",
+        {"root": f"%/raw/{DATASET_VERSION}/%"},
     )[0]
     assert int(leaked["n"]) == 0
 
@@ -215,3 +223,47 @@ def test_expectations_recorded(sql, names):
     for name in ("valid_id", "non_negative_amount", "valid_close_date"):
         assert name in got, f"expectation {name} not in event log: {rows}"
     assert sum(int(r["passed"]) for r in rows) > 0
+
+
+def _fiscal_quarter_exprs() -> list[str]:
+    """The fiscal-quarter expressions used in gold.sql, with the date column renamed to `d`."""
+    text = GOLD_SQL.read_text()
+    exprs = re.findall(r"concat\('FY'.*?\+ 1 AS STRING\)\)", text, re.S)
+    return [" ".join(re.sub(r"\b(o\.close_date|as_of_date)\b", "d", e).split()) for e in exprs]
+
+
+def test_fiscal_quarter_literal_cases(sql):
+    exprs = _fiscal_quarter_exprs()
+    assert len(exprs) >= 2 and len(set(exprs)) == 1, exprs
+    cases = {
+        "2026-02-01": "FY27Q1",
+        "2027-01-31": "FY27Q4",
+        "2026-01-15": "FY26Q4",
+        "2026-11-16": "FY27Q4",
+        "2026-04-30": "FY27Q1",
+        "2026-05-01": "FY27Q2",
+        "2026-10-31": "FY27Q3",
+        "2027-02-01": "FY28Q1",
+    }
+    values = ", ".join(f"(DATE'{d}')" for d in cases)
+    rows = sql(f"SELECT CAST(d AS STRING) AS d, {exprs[0]} AS fq FROM VALUES {values} AS t(d)")
+    assert {r["d"]: r["fq"] for r in rows} == cases
+
+
+def test_jordan_kpis_plausible(sql, names):
+    """Ruling R12: Jordan's FY27Q4 coverage is 3-4x and attainment 25-40%."""
+    jordan = _user_id(sql, names, "Jordan Rivera")
+    k = sql(
+        f"SELECT quota, attainment_pct, coverage_ratio FROM {_fq(names, 'gold_seller_kpis')} "
+        "WHERE owner_id = :o AND fiscal_quarter = 'FY27Q4'",
+        {"o": jordan},
+    )
+    assert len(k) == 1
+    assert float(k[0]["quota"]) == 500000.0
+    assert 3.0 <= float(k[0]["coverage_ratio"]) <= 4.0, k
+    assert 0.25 <= float(k[0]["attainment_pct"]) / 100 <= 0.40, k
+    org = sql(
+        f"SELECT count(*) AS n, count_if(coverage_ratio BETWEEN 1.5 AND 5.0) AS ok "
+        f"FROM {_fq(names, 'gold_seller_kpis')} WHERE is_current_quarter AND open_pipeline_acv > 0"
+    )[0]
+    assert int(org["ok"]) >= 0.8 * int(org["n"]), org

@@ -149,7 +149,7 @@ def _build_users(w: World) -> None:
             title = "Senior Account Executive" if senior else "Account Executive"
             if m["Id"] == w.morgan_id and k == 0:
                 u = add_user(*C.JORDAN, "Senior Account Executive", 16 + t, m["Id"], seg, reg,
-                             1_200_000, "seller")
+                             C.JORDAN_QUOTA, "seller")
                 w.jordan_id = u["Id"]
             elif m["Id"] == mm_west_second and k == 0:
                 u = add_user(*C.TAYLOR, "Account Executive", 16 + t, m["Id"], seg, reg, 900_000,
@@ -408,8 +408,12 @@ def _build_opps(w: World) -> None:
         # close date: mostly current + next fiscal quarter
         u = rng.random()
         if j < C.JORDAN_OPEN_OPPS:
-            close = (date(2026, 11, 20) + timedelta(days=rng.randint(0, 70)) if j < 20
-                     else date(2027, 2, 1) + timedelta(days=rng.randint(0, 80)))
+            # Ruling R12: the 7 JORDAN_NEXT_Q_OPPS close in FY28Q1 (Feb-Apr 2027), the other 18
+            # in FY27Q4 (Nov 20 - Jan 29). The rng draws are unchanged, so the rest of the world
+            # is identical to before.
+            off = rng.randint(0, 70) if j < 20 else rng.randint(0, 80)
+            close = (date(2027, 2, 1) + timedelta(days=off) if j in C.JORDAN_NEXT_Q_OPPS
+                     else date(2026, 11, 20) + timedelta(days=min(off, 70)))
             stage = jordan_stages[j]
         else:
             if u < 0.04:
@@ -460,9 +464,47 @@ def opp_row(w: World, o: dict, last_modified: str | None = None) -> dict:
     }
 
 
+def _calibrate_quotas(w: World) -> None:
+    """Set seller quotas from each territory's current-quarter position (ruling R12).
+
+    Deal sizes vary a lot by segment and each seller has only a few deals, so a flat
+    segment quota gives implausible pipeline coverage (0.3x for SMB, 6x+ for Enterprise).
+    Like a territory plan, each seller's quarterly quota = current-quarter closed-won ACV +
+    open current-quarter pipeline / a target coverage drawn from 1.9x..3.6x. Sellers with no
+    current-quarter pipeline keep the segment default; personas keep their fixed quotas.
+    Managers and RVPs get the roll-up of their team.
+    """
+    rng = rng_for(w.seed, "quota")
+    q_start, q_end = date.fromisoformat(C.CURRENT_FQ_START), date.fromisoformat(C.CURRENT_FQ_END)
+    won: dict[str, int] = {}
+    open_: dict[str, int] = {}
+    for o in w.opps:
+        if not (q_start <= o["close"] <= q_end):
+            continue
+        if o["IsClosed"] and o["IsWon"]:
+            won[o["OwnerId"]] = won.get(o["OwnerId"], 0) + o["Amount"]
+        elif not o["IsClosed"]:
+            open_[o["OwnerId"]] = open_.get(o["OwnerId"], 0) + o["Amount"]
+    for u in w.users:
+        if not u["Title"].endswith("Account Executive"):
+            continue
+        target = rng.uniform(1.9, 3.6)
+        if u["Id"] in (w.jordan_id, w.taylor_id) or not open_.get(u["Id"]):
+            continue
+        quarterly = won.get(u["Id"], 0) + open_[u["Id"]] / target
+        u["Quota__c"] = max(C.MIN_ANNUAL_QUOTA, int(round(4 * quarterly, -4)))
+    for m in w.users:
+        if m["Title"] == "Sales Manager":
+            m["Quota__c"] = sum(u["Quota__c"] for u in w.users if u["ManagerId"] == m["Id"])
+    for r in w.users:
+        if r["Title"] == "Regional Vice President":
+            r["Quota__c"] = sum(m["Quota__c"] for m in w.users if m["ManagerId"] == r["Id"])
+
+
 def build_core(seed: int) -> World:
     w = World(seed=seed)
     _build_users(w)
     _build_accounts(w)
     _build_opps(w)
+    _calibrate_quotas(w)
     return w
