@@ -13,6 +13,8 @@ resources:
       configuration:
         # Only the v4 dataset (rulings R10, R12, R13); _eval/ and _manifest/ are never read.
         raw_root: /Volumes/${var.catalog}/${var.schema}/${var.volume}/v4
+        # Fully-qualified schema for UC routines (column mask fn_mask_pii, Task 4).
+        uc_schema: ${var.catalog}.${var.schema}
       libraries:
         - file:
             path: ../src/pipeline/bronze.sql

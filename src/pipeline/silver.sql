@@ -2,7 +2,7 @@
 -- Salesforce masters are deduplicated to the latest row per Id (LastModifiedDate, then
 -- ingest time). Opportunities use AUTO CDC (SCD type 1) sequenced by LastModifiedDate,
 -- because increments re-emit full rows for changed opps.
--- silver_contacts stays raw (PII); masking happens in gold_contacts_masked / Task 4 views.
+-- silver_contacts.email/phone carry UC column masks (Task 4); gold_contacts_masked masks inline for Lakebase.
 
 -- --------------------------------------------------------------------------- users
 CREATE OR REFRESH MATERIALIZED VIEW silver_users (
@@ -70,11 +70,32 @@ AS SELECT
 FROM bronze_account
 QUALIFY row_number() OVER (PARTITION BY Id ORDER BY to_timestamp(LastModifiedDate) DESC, _ingested_at DESC) = 1;
 
--- --------------------------------------------------------------------------- contacts (raw PII)
+-- --------------------------------------------------------------------------- contacts (PII, UC column masks)
+-- email, phone and mobile_phone carry the UC column mask fn_mask_pii (created by the governance_masks job
+-- task before pipeline_refresh; src/governance/masks.sql). Only account group superapp_revops
+-- sees raw values. The pipeline itself reads the masked values, so gold_contacts_masked
+-- (same mask shapes) is unaffected. Tags are applied post-pipeline (comments_tags.sql).
+-- The function name must be fully qualified: the pipeline resolves routines on
+-- <catalog>.default, not the target schema, so ${uc_schema} = <catalog>.<schema>.
 CREATE OR REFRESH MATERIALIZED VIEW silver_contacts (
+  contact_id STRING COMMENT 'Salesforce Contact Id (18-char). Primary key.',
+  account_id STRING COMMENT 'Account Id the contact belongs to.',
+  first_name STRING COMMENT 'Contact first name.',
+  last_name STRING COMMENT 'Contact last name.',
+  name STRING COMMENT 'Contact full name.',
+  title STRING COMMENT 'Contact job title.',
+  buyer_role STRING COMMENT 'Buying-committee role: VP Operations, Fleet Manager, Safety Director, CFO, IT.',
+  email STRING MASK ${uc_schema}.fn_mask_pii COMMENT 'Work email. PII: UC column mask fn_mask_pii, raw only for superapp_revops (others see j***@domain.com).',
+  phone STRING MASK ${uc_schema}.fn_mask_pii COMMENT 'Office phone. PII: UC column mask fn_mask_pii, raw only for superapp_revops (others see ***-***-1234).',
+  mobile_phone STRING MASK ${uc_schema}.fn_mask_pii COMMENT 'Mobile phone. PII: UC column mask fn_mask_pii, raw only for superapp_revops.',
+  mailing_state STRING COMMENT 'US state of the contact.',
+  owner_id STRING COMMENT 'User Id of the seller who owns the contact.',
+  lead_source STRING COMMENT 'Original lead source.',
+  created_date TIMESTAMP COMMENT 'When the contact was created.',
+  last_modified_date TIMESTAMP COMMENT 'Last CRM modification.',
   CONSTRAINT valid_id EXPECT (contact_id IS NOT NULL) ON VIOLATION DROP ROW
 )
-COMMENT 'Silver: customer contacts. Contains raw PII (email, phone); consumers should use gold_contacts_masked or the governed view.'
+COMMENT 'Silver: customer contacts, latest row per Id. email and phone are PII with UC column masks (fn_mask_pii); app consumers use gold_contacts_masked.'
 AS SELECT
   Id AS contact_id,
   AccountId AS account_id,
