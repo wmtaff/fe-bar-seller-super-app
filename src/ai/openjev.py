@@ -158,7 +158,8 @@ def _backoff(attempt: int) -> float:
 def call(state: dict, questions: dict, *, host: str, token: str, timeout=30, meta: dict | None = None) -> dict:
     """Ask OpenJev `questions` about `state`; return the `answers` map.
 
-    Retries HTTP 429/5xx, timeouts and connection errors with exponential backoff
+    Retries HTTP 429/5xx and any transport error (requests.RequestException: timeouts,
+    connection resets, broken responses) with exponential backoff
     (MAX_ATTEMPTS in total); other 4xx and malformed responses fail at once. Raises
     OpenJevError. If `meta` is given it receives attempts, latency_ms and input_tokens.
     """
@@ -170,7 +171,7 @@ def call(state: dict, questions: dict, *, host: str, token: str, timeout=30, met
         t0 = time.monotonic()
         try:
             r = requests.post(url, headers=headers, json=body, timeout=timeout)
-        except (requests.Timeout, requests.ConnectionError) as e:
+        except requests.RequestException as e:  # timeouts, connection resets, broken chunked bodies ...
             last = f"OpenJev {type(e).__name__}: {str(e)[:200]}"
         else:
             if r.status_code == 200:
