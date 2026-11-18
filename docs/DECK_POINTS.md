@@ -28,11 +28,12 @@ Mirrors a real engagement; no real customer data or names in the repo.
   runs in the Lakeflow job on serverless compute, not on a warehouse. RT stays out of scope anyway.
 - `ai_decide` = the SQL-native wrapper for the same System One question types (model not selectable).
 - **AI is measurable** (Task 7, 2026-11-18, `evidence/06_nba_and_eval.md`): 400 closed opps re-scored by
-  OpenJev as of their pre-close snapshot -> **AUC 0.697** for P(close) vs actual win (generator latent-intent
+  OpenJev as of their pre-close snapshot -> **AUC 0.695** for P(close) vs actual win (generator latent-intent
   ceiling 0.731), **top-decile lift 2.06x** (80% win rate vs 39% base). Call-insight extraction vs planted
   competitors: **precision 1.00 / recall 1.00** (20-call spot check; also 1.00 / 1.00 over all 640 calls,
   287 planted mentions). Logged to MLflow (`fleetwise-score-eval`) and `gold_score_eval`. Calibration is
-  optimistic (0.6-0.8 bin predicts 0.70, observes 0.47); reported as-is, not tuned.
+  optimistic (0.6-0.8 bin predicts 0.71, observes 0.45); reported as-is, not tuned. (An earlier run
+  scored 0.697 with a post-close CRM competitor field leaking in; removed.)
 - Next best actions: 4,045 ranked actions (call next steps, model next_action, 4 rules), stable `action_id`;
   a no-change re-run rewrites 0 rows, so app write-backs survive and the Lakebase sync gets no churn.
 

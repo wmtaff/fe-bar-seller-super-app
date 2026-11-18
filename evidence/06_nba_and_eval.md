@@ -18,7 +18,8 @@ All three tables: regular Delta, CDF on, primary key, table and column comments 
 | NBA re-run (no input change) | 152607038282231 | SUCCESS | MERGE: 0 inserted / 0 updated / 0 deleted; see rebuild safety |
 | NBA with a temporary feedback table | (run after creating a fixture `gold_nba_feedback`) | SUCCESS | multiplier check, then the fixture was dropped and NBAs rebuilt |
 | NBA after quote-expiry regex fix | (2026-11-18 11:55) | SUCCESS | MERGE 0 / 0 / 0 (no output change) |
-| Eval, `run_eval=true` | 984000213128722 | SUCCESS (evaluate_scores 82 s) | `check_run_eval` outcome `true`; MLflow run `f50df91209ae423ba9fd797b5d954e40` |
+| Eval 1, `run_eval=true` (superseded: leaky) | 984000213128722 | SUCCESS (evaluate_scores 82 s) | MLflow run `f50df91209ae423ba9fd797b5d954e40`; passed the post-close CRM competitor (see below) |
+| **Eval 2, `run_eval=true` (current)** | 153643270603211 | SUCCESS | `check_run_eval` outcome `true`; MLflow run `cfc43607c7264bf5a0106174f92bf175` |
 | Eval gate, default `run_eval=false` | 325763278933493 | SUCCESS | `check_run_eval` outcome `false`, `evaluate_scores` EXCLUDED |
 
 Earlier failed attempts while building (fixed before commit): the SQL file task runs statement by
@@ -101,39 +102,46 @@ dropped and the NBAs rebuilt (factor 1.0 again; `test_priority_score_formula` pa
     usage from `silver_usage_daily` 30-day windows ending at the snapshot; tickets created by the snapshot
     and not solved by then, P1s in the 30 days before it;
   - calls: insights from calls that started by the end of the snapshot day.
-- Approximations (documented, simplest defensible): the CRM `next_step` is dropped (only its current value
-  exists); `competitor`, products, fleet size and opportunity type are taken as recorded (set at
-  creation); a Task's Completed status is its current status; ARR ignores churn. Usage history starts
+- Approximations (documented, simplest defensible): the CRM `next_step` and `competitor` fields are
+  dropped (null in the state). Only their current values exist, and the generator back-fills the CRM
+  competitor on lost deals at close time (`src/fleetwise_gen/entities.py`; ~82% of lost vs ~55% of won
+  opps have it), which would leak the outcome. Pre-snapshot competitor mentions still reach the state via
+  the as-of call insights. Products, fleet size and opportunity type are taken as recorded; a Task's Completed status is its current status; ARR ignores churn. Usage history starts
   2026-08-19, so most snapshots have no usage (null in the state, no leakage).
 
-### Results (MLflow run `f50df91209ae423ba9fd797b5d954e40`, experiment `/Users/will.taff@databricks.com/fleetwise-score-eval`)
+### Results (MLflow run `cfc43607c7264bf5a0106174f92bf175`, experiment `/Users/will.taff@databricks.com/fleetwise-score-eval`)
 
 | Metric | Value |
 |---|---|
-| **AUC, p_close_quarter vs is_won** | **0.697** |
+| **AUC, p_close_quarter vs is_won** | **0.695** |
 | AUC, generator true_intent vs is_won (sanity ceiling) | 0.731 |
 | **Top-decile lift** | **2.06x** (win rate 0.80 vs base 0.3875) |
-| Brier score | 0.249 |
-| Mean p_close_quarter | 0.574 |
-| Scored / errors | 400 / 0 (p50 latency 93 ms) |
+| Brier score | 0.255 |
+| Mean p_close_quarter | 0.586 |
+| Scored / errors | 400 / 0 |
 | Sampled opps with a call before the snapshot | 2 |
 
 AUC is above the 0.65 bar, so no tuning question arises (ruling R20: not tuned either way). The
 score reaches 95% of the AUC of the generator's own latent intent.
 
+Review fix (round 1): eval 1 passed the CRM `competitor` field, which the generator back-fills on lost
+deals at close (a post-snapshot, outcome-correlated value). With it removed, AUC went from the leaky
+**0.697** to **0.695**; top-decile lift is unchanged at 2.06x. The leak was real but its effect on this
+sample was small. Both runs stay in MLflow and `gold_score_eval` (47 rows each).
+
 Lift by decile (decile 1 = highest p_close_quarter; 40 opps each):
 
 | decile | won | win_rate | lift | mean p_close |
 |---|---|---|---|---|
-| 1 | 32 | 0.800 | 2.06 | 0.787 |
-| 2 | 26 | 0.650 | 1.68 | 0.742 |
-| 3 | 18 | 0.450 | 1.16 | 0.711 |
-| 4 | 13 | 0.325 | 0.84 | 0.678 |
-| 5 | 9 | 0.225 | 0.58 | 0.623 |
-| 6 | 13 | 0.325 | 0.84 | 0.572 |
-| 7 | 16 | 0.400 | 1.03 | 0.509 |
-| 8 | 15 | 0.375 | 0.97 | 0.450 |
-| 9 | 4 | 0.100 | 0.26 | 0.380 |
+| 1 | 32 | 0.800 | 2.06 | 0.793 |
+| 2 | 24 | 0.600 | 1.55 | 0.756 |
+| 3 | 20 | 0.500 | 1.29 | 0.726 |
+| 4 | 15 | 0.375 | 0.97 | 0.692 |
+| 5 | 8 | 0.200 | 0.52 | 0.641 |
+| 6 | 13 | 0.325 | 0.84 | 0.587 |
+| 7 | 13 | 0.325 | 0.84 | 0.524 |
+| 8 | 15 | 0.375 | 0.97 | 0.463 |
+| 9 | 6 | 0.150 | 0.39 | 0.384 |
 | 10 | 9 | 0.225 | 0.58 | 0.291 |
 
 Calibration (5 equal-width bins):
@@ -141,13 +149,13 @@ Calibration (5 equal-width bins):
 | p_close_quarter bin | n | mean predicted | observed win rate |
 |---|---|---|---|
 | 0.0-0.2 | 0 | - | - |
-| 0.2-0.4 | 69 | 0.324 | 0.159 |
-| 0.4-0.6 | 131 | 0.502 | 0.351 |
-| 0.6-0.8 | 191 | 0.703 | 0.466 |
-| 0.8-1.0 | 9 | 0.813 | 1.000 |
+| 0.2-0.4 | 68 | 0.324 | 0.162 |
+| 0.4-0.6 | 120 | 0.506 | 0.350 |
+| 0.6-0.8 | 201 | 0.710 | 0.453 |
+| 0.8-1.0 | 11 | 0.813 | 1.000 |
 
 Ranking is useful (monotone at the top and bottom, flat in the middle deciles); the absolute
-probabilities are optimistic by roughly 0.15-0.25 below 0.8. p_close_quarter is score / 4 of a 5-level
+probabilities are optimistic by roughly 0.15-0.26 below 0.8. p_close_quarter is score / 4 of a 5-level
 question, not a fitted probability; a Platt/isotonic recalibration would be the next step (not done:
 "don't tune").
 
@@ -167,10 +175,11 @@ positives on the other 18), so the all-calls row is the stronger evidence.
   `lift_by_decile.md`, `calibration.md`, `extraction_spot_check.md`, `eval_tables.json`.
 - `gold_score_eval` (run_id, metric, segment, value, evaluated_at): 47 rows for this run (auc, lift and
   win_rate per decile, calibration per bin, competitor precision/recall per slice, counts).
+  The superseded leaky run's 47 rows are kept under its own run_id.
 
 ## Tests
 
-- Unit (`.venv/bin/pytest tests/unit -q`): 79 passed (16 new: metrics, as-of discipline, truth isolation,
+- Unit (`.venv/bin/pytest tests/unit -q`): 80 passed (17 new, incl. a check that the eval state drops the CRM competitor/next_step: metrics, as-of discipline, truth isolation,
   NBA SQL rebuild-safety and feedback optionality, job wiring; plus `openjev.call` retrying any
   `requests.RequestException`).
 - Integration (`.venv/bin/pytest tests/integration/test_nba.py -m integration`): 12 passed, all
