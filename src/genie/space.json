@@ -1,0 +1,282 @@
+{
+  "version": 2,
+  "config": {
+    "sample_questions": [
+      {
+        "id": "a0000000000000000000000000000001",
+        "question": [
+          "What is my open pipeline by stage this quarter?"
+        ]
+      },
+      {
+        "id": "a0000000000000000000000000000002",
+        "question": [
+          "Which of my deals mention a competitor and close this quarter?"
+        ]
+      },
+      {
+        "id": "a0000000000000000000000000000003",
+        "question": [
+          "Show my top 5 deals by ACV times close probability."
+        ]
+      },
+      {
+        "id": "a0000000000000000000000000000004",
+        "question": [
+          "Which accounts have usage down more than 15% in the last 30 days and an open opportunity?"
+        ]
+      },
+      {
+        "id": "a0000000000000000000000000000005",
+        "question": [
+          "What are the open next steps from my last calls?"
+        ]
+      },
+      {
+        "id": "a0000000000000000000000000000006",
+        "question": [
+          "What is my quota attainment and pipeline coverage this quarter?"
+        ]
+      },
+      {
+        "id": "a0000000000000000000000000000007",
+        "question": [
+          "What are my top 5 open next best actions by priority?"
+        ]
+      },
+      {
+        "id": "a0000000000000000000000000000008",
+        "question": [
+          "Which of my accounts have the most whitespace products?"
+        ]
+      },
+      {
+        "id": "a0000000000000000000000000000009",
+        "question": [
+          "How many open leads are routed to each segment, and what is their average fit score?"
+        ]
+      },
+      {
+        "id": "a000000000000000000000000000000a",
+        "question": [
+          "How does customer sentiment break down across my calls?"
+        ]
+      }
+    ]
+  },
+  "data_sources": {
+    "tables": [
+      {
+        "identifier": "${catalog}.${schema}.gold_lead_scores"
+      },
+      {
+        "identifier": "${catalog}.${schema}.gold_nba_feedback"
+      },
+      {
+        "identifier": "${catalog}.${schema}.gold_user_hierarchy"
+      },
+      {
+        "identifier": "${catalog}.${schema}.v_account_360"
+      },
+      {
+        "identifier": "${catalog}.${schema}.v_call_insights"
+      },
+      {
+        "identifier": "${catalog}.${schema}.v_deal_scores",
+        "column_configs": [
+          {
+            "column_name": "p_close_quarter",
+            "synonyms": [
+              "close probability",
+              "probability to close",
+              "win probability",
+              "likelihood to close"
+            ]
+          }
+        ]
+      },
+      {
+        "identifier": "${catalog}.${schema}.v_next_best_actions"
+      },
+      {
+        "identifier": "${catalog}.${schema}.v_opportunity_pipeline",
+        "column_configs": [
+          {
+            "column_name": "acv",
+            "synonyms": [
+              "ACV",
+              "annual contract value",
+              "deal size",
+              "amount"
+            ]
+          },
+          {
+            "column_name": "forecast_category",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          },
+          {
+            "column_name": "stage",
+            "enable_format_assistance": true,
+            "enable_entity_matching": true
+          }
+        ]
+      },
+      {
+        "identifier": "${catalog}.${schema}.v_seller_kpis"
+      }
+    ]
+  },
+  "instructions": {
+    "text_instructions": [
+      {
+        "id": "b0000000000000000000000000000000",
+        "content": [
+          "Fleetwise Revenue Copilot answers questions about a seller's own pipeline, accounts, sales calls, AI deal scores and next best actions.\n",
+          "Row-level security: every v_* view is already scoped to the caller. \"my\", \"I\", \"me\" and \"our\" mean the caller's persona (mapped through demo_identity_map; a seller sees their own book, a manager their team). The views have already applied that scope, so NEVER add a filter on owner_name, owner_id or any person's name for \"my\" questions; just query the view. Only filter by a person when the user names someone else explicitly.\n",
+          "Always use the v_* views for opportunities, KPIs, accounts, calls, scores and actions. gold_user_hierarchy is the org chart, gold_lead_scores holds AI fit and routing for unassigned open leads (no owner), gold_nba_feedback holds acceptance rates per action type.\n",
+          "Fiscal calendar: the fiscal year starts Feb 1 (FY27 = 2026-02-01 to 2027-01-31; Nov 2026 is FY27Q4). Prefer the fiscal_quarter column (format FYyyQn) and the is_current_quarter flag over date math. \"this quarter\" = is_current_quarter = true; \"next quarter\" = the following fiscal_quarter value.\n",
+          "ACV = the acv column (annual contract value, USD). \"Pipeline\" / \"open pipeline\" = SUM(acv) over opportunities with is_closed = false. \"Weighted\" or \"ACV times close probability\" = acv * v_deal_scores.p_close_quarter (the AI probability, 0..1), not the CRM probability column.\n",
+          "\"At risk\" deal = open opportunity with v_deal_scores.p_close_quarter < 0.4 AND close date in the current fiscal quarter (v_opportunity_pipeline.is_current_quarter).\n",
+          "\"Competitive\" deal (or a deal that \"mentions a competitor\") = v_deal_scores.competitive_risk > 0.5 OR size(v_call_insights.competitors) > 0 on any of its calls. Aggregate call competitors per opportunity with array_distinct(flatten(collect_list(competitors))) to avoid duplicate rows.\n",
+          "Joins: opportunity_id joins v_opportunity_pipeline to v_deal_scores (1:1), v_call_insights (1 opp : many calls) and v_next_best_actions (1 opp : many actions). account_id joins accounts. owner_id joins gold_user_hierarchy.user_id.\n",
+          "Usage: v_account_360.usage_trend_pct_30d is the percent change in active vehicles, last 30 days vs the 30 days before; \"usage down more than 15%\" = usage_trend_pct_30d < -15. \"Has an open opportunity\" = v_account_360.open_opportunities > 0. Prospects have NULL usage.\n",
+          "Call next steps: v_call_insights.next_steps is ARRAY<STRUCT<action, owner, due>>. To list them, explode it: SELECT ..., ns.action, ns.owner, ns.due FROM v_call_insights c LATERAL VIEW explode(c.next_steps) t AS ns. \"My last calls\" = the most recent calls by started_at (e.g. the latest call per opportunity, or the last 5 calls). Ignore rows where extract_error is not null. Recommended actions with a status live in v_next_best_actions (status = 'open' for open actions; order by priority_score DESC).\n",
+          "Show money as USD, round probabilities to 2 decimals, and include opportunity_name and account_name when listing deals."
+        ]
+      }
+    ],
+    "example_question_sqls": [
+      {
+        "id": "c0000000000000000000000000000001",
+        "question": [
+          "Which of my deals are at risk this quarter?"
+        ],
+        "sql": [
+          "SELECT p.opportunity_id, p.opportunity_name, p.account_name, p.stage, p.acv, p.close_date,\n",
+          "       ROUND(s.p_close_quarter, 2) AS p_close_quarter, s.close_label, s.next_action\n",
+          "FROM ${catalog}.${schema}.v_opportunity_pipeline p\n",
+          "JOIN ${catalog}.${schema}.v_deal_scores s ON s.opportunity_id = p.opportunity_id\n",
+          "WHERE NOT p.is_closed AND p.is_current_quarter AND s.p_close_quarter < 0.4\n",
+          "ORDER BY p.acv DESC"
+        ],
+        "usage_guidance": [
+          "Definition of an at-risk deal. Scope is already applied by the views; never filter by owner."
+        ]
+      },
+      {
+        "id": "c0000000000000000000000000000002",
+        "question": [
+          "Which of my competitive deals close this quarter?"
+        ],
+        "sql": [
+          "SELECT p.opportunity_id, p.opportunity_name, p.account_name, p.stage, p.acv, p.close_date,\n",
+          "       ROUND(s.competitive_risk, 2) AS competitive_risk,\n",
+          "       array_distinct(flatten(collect_list(c.competitors))) AS competitors_mentioned\n",
+          "FROM ${catalog}.${schema}.v_opportunity_pipeline p\n",
+          "LEFT JOIN ${catalog}.${schema}.v_deal_scores s ON s.opportunity_id = p.opportunity_id\n",
+          "LEFT JOIN ${catalog}.${schema}.v_call_insights c ON c.opportunity_id = p.opportunity_id\n",
+          "WHERE NOT p.is_closed AND p.is_current_quarter\n",
+          "GROUP BY ALL\n",
+          "HAVING s.competitive_risk > 0.5 OR size(competitors_mentioned) > 0\n",
+          "ORDER BY p.acv DESC"
+        ],
+        "usage_guidance": [
+          "Definition of a competitive deal (also: deals that mention a competitor)."
+        ]
+      },
+      {
+        "id": "c0000000000000000000000000000003",
+        "question": [
+          "What is my quota attainment this quarter?"
+        ],
+        "sql": [
+          "SELECT owner_name, fiscal_quarter, quota, closed_won_acv, attainment_pct, open_pipeline_acv, coverage_ratio\n",
+          "FROM ${catalog}.${schema}.v_seller_kpis\n",
+          "WHERE is_current_quarter\n",
+          "ORDER BY owner_name"
+        ],
+        "usage_guidance": [
+          "Quota, attainment and coverage come from v_seller_kpis (one row per seller and fiscal quarter)."
+        ]
+      }
+    ],
+    "join_specs": [
+      {
+        "id": "d0000000000000000000000000000001",
+        "left": {
+          "identifier": "${catalog}.${schema}.v_opportunity_pipeline",
+          "alias": "v_opportunity_pipeline"
+        },
+        "right": {
+          "identifier": "${catalog}.${schema}.v_deal_scores",
+          "alias": "v_deal_scores"
+        },
+        "sql": [
+          "`v_opportunity_pipeline`.`opportunity_id` = `v_deal_scores`.`opportunity_id`",
+          "--rt=FROM_RELATIONSHIP_TYPE_ONE_TO_ONE--"
+        ]
+      },
+      {
+        "id": "d0000000000000000000000000000002",
+        "left": {
+          "identifier": "${catalog}.${schema}.v_opportunity_pipeline",
+          "alias": "v_opportunity_pipeline"
+        },
+        "right": {
+          "identifier": "${catalog}.${schema}.v_call_insights",
+          "alias": "v_call_insights"
+        },
+        "sql": [
+          "`v_opportunity_pipeline`.`opportunity_id` = `v_call_insights`.`opportunity_id`",
+          "--rt=FROM_RELATIONSHIP_TYPE_ONE_TO_MANY--"
+        ]
+      },
+      {
+        "id": "d0000000000000000000000000000003",
+        "left": {
+          "identifier": "${catalog}.${schema}.v_opportunity_pipeline",
+          "alias": "v_opportunity_pipeline"
+        },
+        "right": {
+          "identifier": "${catalog}.${schema}.v_next_best_actions",
+          "alias": "v_next_best_actions"
+        },
+        "sql": [
+          "`v_opportunity_pipeline`.`opportunity_id` = `v_next_best_actions`.`opportunity_id`",
+          "--rt=FROM_RELATIONSHIP_TYPE_ONE_TO_MANY--"
+        ]
+      },
+      {
+        "id": "d0000000000000000000000000000004",
+        "left": {
+          "identifier": "${catalog}.${schema}.v_opportunity_pipeline",
+          "alias": "v_opportunity_pipeline"
+        },
+        "right": {
+          "identifier": "${catalog}.${schema}.v_account_360",
+          "alias": "v_account_360"
+        },
+        "sql": [
+          "`v_opportunity_pipeline`.`account_id` = `v_account_360`.`account_id`",
+          "--rt=FROM_RELATIONSHIP_TYPE_MANY_TO_ONE--"
+        ]
+      },
+      {
+        "id": "d0000000000000000000000000000005",
+        "left": {
+          "identifier": "${catalog}.${schema}.v_seller_kpis",
+          "alias": "v_seller_kpis"
+        },
+        "right": {
+          "identifier": "${catalog}.${schema}.gold_user_hierarchy",
+          "alias": "gold_user_hierarchy"
+        },
+        "sql": [
+          "`v_seller_kpis`.`owner_id` = `gold_user_hierarchy`.`user_id`",
+          "--rt=FROM_RELATIONSHIP_TYPE_MANY_TO_ONE--"
+        ]
+      }
+    ]
+  }
+}

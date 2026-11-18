@@ -1,0 +1,25 @@
+# Task 9 benchmark: 10 questions run by benchmark.py through the Genie Conversation API.
+# Q1-Q5 are the required questions (verbatim). Pass = Genie returns SQL and a non-empty result;
+# Q2 must also stay inside Jordan Rivera's opportunities (the caller's persona).
+questions:
+  - id: q1
+    question: "What is my open pipeline by stage this quarter?"
+  - id: q2
+    question: "Which of my deals mention a competitor and close this quarter?"
+    subset_of_persona_opps: true
+  - id: q3
+    question: "Show my top 5 deals by ACV times close probability."
+  - id: q4
+    question: "Which accounts have usage down more than 15% in the last 30 days and an open opportunity?"
+  - id: q5
+    question: "What are the open next steps from my last calls?"
+  - id: q6
+    question: "What is my quota attainment and pipeline coverage this quarter?"
+  - id: q7
+    question: "What are my top 5 open next best actions by priority?"
+  - id: q8
+    question: "Which of my accounts have the most whitespace products?"
+  - id: q9
+    question: "How many open leads are routed to each segment, and what is their average fit score?"
+  - id: q10
+    question: "How does customer sentiment break down across my calls?"
