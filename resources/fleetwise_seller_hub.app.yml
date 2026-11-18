@@ -1,0 +1,36 @@
+# Task 10: Fleetwise Seller Hub (AppKit). Source in app/fleetwise-seller-hub (scaffolded by
+# `databricks apps init --features analytics,lakebase,genie`); the resource lives in the root
+# bundle so one `databricks bundle deploy` ships pipeline, job and app with the same variables.
+#
+# Identity model:
+#   * Lakebase (synced serving.* tables, app.* write-back) runs as the app service principal; the
+#     server scopes every query to the persona's visible owner_ids (synced tables carry no UC
+#     row filters, ruling R2).
+#   * demo_identity_map (persona read + switcher MERGE) and Genie run on behalf of the signed-in
+#     user (OBO scopes `sql`, `dashboards.genie`), so the SP needs no MODIFY on the map (R16).
+resources:
+  apps:
+    fleetwise_seller_hub:
+      name: fleetwise-seller-hub
+      description: "Fleetwise Seller Hub: my week, deal 360 and Ask Genie for sellers"
+      source_code_path: ../app/fleetwise-seller-hub
+      lifecycle:
+        started: true
+      user_api_scopes:
+        - sql
+        - dashboards.genie
+      resources:
+        - name: sql-warehouse
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: CAN_USE
+        - name: genie-space
+          genie_space:
+            name: ${var.genie_space_name}
+            space_id: ${var.genie_space_id}
+            permission: CAN_RUN
+        - name: postgres
+          postgres:
+            branch: projects/${var.lakebase_project}/branches/${var.lakebase_branch}
+            database: projects/${var.lakebase_project}/branches/${var.lakebase_branch}/databases/${var.lakebase_database}
+            permission: CAN_CONNECT_AND_CREATE

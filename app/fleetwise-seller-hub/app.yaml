@@ -1,0 +1,13 @@
+command: ['npm', 'run', 'start']
+env:
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql-warehouse
+  - name: DATABRICKS_GENIE_SPACE_ID
+    valueFrom: genie-space
+  - name: LAKEBASE_ENDPOINT
+    valueFrom: postgres
+  # Unity Catalog location of demo_identity_map (bundle vars catalog / schema).
+  - name: UC_CATALOG
+    value: serverless_stable_s1omq8_catalog
+  - name: UC_SCHEMA
+    value: seller_superapp

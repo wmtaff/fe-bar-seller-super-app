@@ -28,6 +28,18 @@ variables:
   lakebase_catalog:
     description: Optional UC catalog on the Lakebase database (federated write-back fallback). Not registered here (needs CREATE CATALOG); writeback.sql skips it when absent.
     default: fleetwise_lakebase
+  genie_space_id:
+    description: Genie space "Fleetwise Revenue Copilot" (Task 9, src/genie/space_id.txt).
+    default: 01f1e3a1962912c08de057636d1912d8
+  genie_space_name:
+    description: Genie space display name.
+    default: Fleetwise Revenue Copilot
+  lakebase_branch:
+    description: Lakebase branch id the app attaches to.
+    default: production
+  lakebase_database:
+    description: Lakebase database resource id (Postgres database databricks_postgres).
+    default: databricks-postgres
   profile:
     description: Databricks CLI profile used to deploy and run (informational; auth is set in the target).
     default: fevm-serverless-stable-s1omq8
