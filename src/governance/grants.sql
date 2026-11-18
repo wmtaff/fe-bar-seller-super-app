@@ -29,6 +29,9 @@ GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_contacts_masked TO ${princip
 
 -- AI gold tables (Tasks 5-7). Uncomment when they exist; if they are seller-owned and served
 -- to sellers, prefer a v_* dynamic view over a direct grant.
+-- gold_call_insights exists (Task 5). It has no PII but is not row-filtered: every call of
+-- every seller is visible. The app reads it through Lakebase (synced, app-side scoping), so
+-- grant it directly only to the app SP; for Genie/seller users, wrap it in a v_* view first.
 -- GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_call_insights TO ${principal};
 -- GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_deal_scores TO ${principal};
 -- GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_next_best_actions TO ${principal};
