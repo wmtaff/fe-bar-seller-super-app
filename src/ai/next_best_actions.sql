@@ -229,7 +229,7 @@ p1_rule AS (
                 ', oldest opened ', date_format(t.oldest, 'yyyy-MM-dd'), ': "', t.subject, '".') AS why,
          date_add(a.as_of_date, 2) AS due_date
   FROM (SELECT account_id, count(*) AS n, min(created_at) AS oldest,
-               min_by(subject, created_at) AS subject
+               min_by(subject, struct(created_at, ticket_id)) AS subject
         FROM silver_tickets
         WHERE severity = 'P1' AND status IN ('Open', 'Pending')
         GROUP BY account_id) t
