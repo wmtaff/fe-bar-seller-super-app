@@ -40,14 +40,34 @@ def test_governance_tasks_are_sql_files_on_the_warehouse_var():
         assert sql_task["parameters"] == {"catalog": "${var.catalog}", "schema": "${var.schema}"}
 
 
-def test_pipeline_declares_masks_on_silver_contacts():
+def _mv_schema(sql_text, name):
+    return sql_text.split(f"CREATE OR REFRESH MATERIALIZED VIEW {name}", 1)[1].split(" AS SELECT", 1)[0]
+
+
+def test_pipeline_declares_masks_on_pii_columns():
     silver = (ROOT / "src" / "pipeline" / "silver.sql").read_text()
-    block = silver.split("CREATE OR REFRESH MATERIALIZED VIEW silver_contacts", 1)[1].split(" AS SELECT", 1)[0]
-    assert "email STRING" in block and "phone STRING" in block
-    for col in ["email", "phone", "mobile_phone"]:
-        assert re.search(rf"\b{col} STRING MASK \S*fn_mask_pii\b", block), col
+    for table, cols in {"silver_contacts": ["email", "phone", "mobile_phone"],
+                        "silver_leads": ["email", "phone"]}.items():
+        block = _mv_schema(silver, table)
+        for col in cols:
+            assert re.search(rf"\b{col} STRING MASK \S*fn_mask_pii\b", block), (table, col)
+
+
+def test_grant_plan_is_views_only_and_not_wired():
+    plan = (GOV / "grants.sql").read_text()
+    active = [l for l in plan.splitlines() if l.strip().startswith("GRANT")]
+    assert active and all("${principal}" in l for l in active)
+    granted = " ".join(active)
+    for view in ["v_opportunity_pipeline", "v_seller_kpis", "v_account_360", "gold_contacts_masked"]:
+        assert f".{view} TO" in granted, view
+    assert not re.search(r"\.(bronze|silver)_\w+ TO", granted), "no grants on bronze/silver"
+    base_gold = re.findall(r"\.(gold_\w+) TO", granted)
+    assert set(base_gold) == {"gold_contacts_masked"}, base_gold
+    assert "MODIFY" not in granted and "EXECUTE" not in granted
+    job = JOB.read_text()
+    assert "grants.sql" not in job, "the grant plan is applied by Task 10, not the daily job"
 
 
 def test_governance_sql_files_exist():
-    for f in ["setup.sql", "row_filters.sql", "masks.sql", "comments_tags.sql"]:
+    for f in ["setup.sql", "row_filters.sql", "masks.sql", "comments_tags.sql", "grants.sql"]:
         assert (GOV / f).read_text().strip(), f

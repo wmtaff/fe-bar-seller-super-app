@@ -1,81 +1,28 @@
-"""Task 4: Unity Catalog governance (ruling R2).
+"""Task 4: Unity Catalog governance (rulings R2, R16) - read-only checks.
 
-Row-level security lives on the secure views v_opportunity_pipeline / v_seller_kpis
-(the base gold tables stay unfiltered so Lakebase can sync them). PII masks live on
-silver_contacts.email / .phone. Expected values are derived with SQL from
-gold_user_hierarchy, never hard-coded (ruling R14 regenerates the data).
+Row-level security lives on dynamic views (owner-rights, filtering on current_user()):
+v_opportunity_pipeline, v_seller_kpis, v_account_360. The base gold tables stay unfiltered so
+Lakebase can sync them. PII masks live on silver_contacts / silver_leads. Expected values are
+derived with SQL from gold_user_hierarchy, never hard-coded (ruling R14).
 
-The tests switch the executing user's persona in demo_identity_map and restore the
-original row afterwards.
+Tests that switch the caller's persona in demo_identity_map are in
+test_governance_mutating.py (guarded; see its docstring).
 """
 
 import re
 
 import pytest
+from _governance_helpers import GOVERNED_VIEWS, fq, rvp_of, team_ids, user_id
 
 pytestmark = pytest.mark.integration
 
-GOVERNED_VIEWS = ["v_opportunity_pipeline", "v_seller_kpis"]
-FUNCTIONS = ["fn_can_see_owner", "fn_can_see_owner_for", "fn_mask_pii", "fn_mask_pii_for"]
+FUNCTIONS = ["fn_can_see_owner", "fn_can_see_owner_for", "fn_current_persona", "fn_mask_pii", "fn_mask_pii_for"]
 MASKED_EMAIL = re.compile(r"^.\*\*\*@[^@]+$")
 MASKED_PHONE = re.compile(r"^\*\*\*-\*\*\*-\d{0,4}$")
-
-
-def _fq(names, obj):
-    return f"`{names['catalog']}`.`{names['schema']}`.`{obj}`"
-
-
-def _user_id(sql, names, full_name):
-    rows = sql(
-        f"SELECT user_id FROM {_fq(names, 'gold_user_hierarchy')} WHERE name = :n", {"n": full_name}
-    )
-    assert len(rows) == 1, f"expected exactly one user named {full_name}, got {rows}"
-    return rows[0]["user_id"]
-
-
-def _team_ids(sql, names, leader_id):
-    """Leader plus everyone whose manager or RVP is the leader (independent of the UDFs)."""
-    rows = sql(
-        f"SELECT user_id FROM {_fq(names, 'gold_user_hierarchy')} "
-        "WHERE user_id = :u OR manager_id = :u OR rvp_id = :u",
-        {"u": leader_id},
-    )
-    return {r["user_id"] for r in rows}
-
-
-def _owners(sql, names, obj, where=""):
-    rows = sql(f"SELECT DISTINCT owner_id FROM {_fq(names, obj)} {where}")
-    return {r["owner_id"] for r in rows}
-
-
-def _is_account_admin(sql):
-    return sql("SELECT is_account_group_member('admins') AS a")[0]["a"] == "true"
-
-
-@pytest.fixture
-def persona(sql, names):
-    """Return set_persona(user_id, role); restores the caller's original map row on teardown."""
-    tbl = _fq(names, "demo_identity_map")
-    original = sql(f"SELECT * FROM {tbl} WHERE workspace_email = current_user()")
-
-    def set_persona(user_id, role):
-        sql(f"DELETE FROM {tbl} WHERE workspace_email = current_user()")
-        if role is not None:
-            sql(
-                f"INSERT INTO {tbl} (workspace_email, persona_user_id, persona_role) "
-                "VALUES (current_user(), :u, :r)",
-                {"u": user_id, "r": role},
-            )
-
-    yield set_persona
-
-    sql(f"DELETE FROM {tbl} WHERE workspace_email = current_user()")
-    for row in original:
-        sql(
-            f"INSERT INTO {tbl} (workspace_email, persona_user_id, persona_role) "
-            "VALUES (:e, :u, :r)",
-            {"e": row["workspace_email"], "u": row["persona_user_id"], "r": row["persona_role"]},
-        )
+PII_COLUMNS = {
+    "silver_contacts": ["email", "phone", "mobile_phone"],
+    "silver_leads": ["email", "phone"],
+}
 
 
 # --------------------------------------------------------------------------- objects
@@ -102,90 +49,53 @@ def test_governance_objects_exist(sql, names):
 
 def test_identity_map_seeded_for_current_user(sql, names):
     rows = sql(
-        f"SELECT m.persona_role, h.name FROM {_fq(names, 'demo_identity_map')} m "
-        f"JOIN {_fq(names, 'gold_user_hierarchy')} h ON h.user_id = m.persona_user_id "
+        f"SELECT m.persona_role, h.name FROM {fq(names, 'demo_identity_map')} m "
+        f"JOIN {fq(names, 'gold_user_hierarchy')} h ON h.user_id = m.persona_user_id "
         "WHERE m.workspace_email = current_user()"
     )
     assert len(rows) == 1, f"expected one seeded map row for the current user, got {rows}"
     assert rows[0]["persona_role"] in {"seller", "manager", "admin"}
 
 
-# --------------------------------------------------------------------------- row filter
-
-
-def test_row_filter_scopes_to_persona(sql, names, persona):
-    jordan = _user_id(sql, names, "Jordan Rivera")
-    persona(jordan, "seller")
-    for v in GOVERNED_VIEWS:
-        rows = sql(f"SELECT count(DISTINCT owner_id) AS n FROM {_fq(names, v)}")
-        assert int(rows[0]["n"]) == 1, f"{v}: seller persona sees {rows[0]['n']} owners"
-        assert _owners(sql, names, v) == {jordan}
-
-
-def test_manager_persona_sees_team(sql, names, persona):
-    morgan = _user_id(sql, names, "Morgan Lee")
-    team = _team_ids(sql, names, morgan)
-    reports = sql(
-        f"SELECT count(*) AS n FROM {_fq(names, 'gold_user_hierarchy')} WHERE manager_id = :u",
-        {"u": morgan},
-    )
-    assert len(team) == int(reports[0]["n"]) + 1, "a manager's team is the manager plus direct reports"
-    persona(morgan, "manager")
-    for v, base in [("v_opportunity_pipeline", "gold_opportunity_pipeline"),
-                    ("v_seller_kpis", "gold_seller_kpis")]:
-        expected = _owners(sql, names, base) & team
-        assert len(expected) > 1, f"{base}: Morgan's team should own rows for several sellers"
-        assert _owners(sql, names, v) == expected, f"{v}: manager persona sees the wrong owners"
-
-
-def test_empty_persona_sees_no_open_opps(sql, names, persona):
-    taylor = _user_id(sql, names, "Taylor Empty")
-    persona(taylor, "seller")
+def test_identity_map_unique(sql, names):
     rows = sql(
-        f"SELECT count(*) AS n FROM {_fq(names, 'v_opportunity_pipeline')} WHERE NOT is_closed"
+        f"SELECT count(*) AS n, count(DISTINCT workspace_email) AS d FROM {fq(names, 'demo_identity_map')}"
     )
-    assert int(rows[0]["n"]) == 0
-    assert _owners(sql, names, "v_opportunity_pipeline") <= {taylor}
+    assert rows[0]["n"] == rows[0]["d"], f"duplicate logins in demo_identity_map: {rows}"
+
+
+# --------------------------------------------------------------------------- row filter
 
 
 def test_explicit_persona_variant(sql, names):
     """fn_can_see_owner_for(persona, owner) is the testable core (no dependence on the caller)."""
-    hier = _fq(names, "gold_user_hierarchy")
-    fn = _fq(names, "fn_can_see_owner_for")
-    for who in ["Jordan Rivera", "Morgan Lee"]:
-        uid = _user_id(sql, names, who)
+    hier = fq(names, "gold_user_hierarchy")
+    fn = fq(names, "fn_can_see_owner_for")
+    jordan = user_id(sql, names, "Jordan Rivera")
+    cases = {
+        "seller": jordan,
+        "manager": user_id(sql, names, "Morgan Lee"),
+        "rvp": rvp_of(sql, names, jordan),  # Jordan's RVP sees the whole region
+    }
+    seen = {}
+    for label, uid in cases.items():
         rows = sql(f"SELECT user_id FROM {hier} WHERE {fn}(:p, user_id)", {"p": uid})
-        assert {r["user_id"] for r in rows} == _team_ids(sql, names, uid), who
+        seen[label] = {r["user_id"] for r in rows}
+        assert seen[label] == team_ids(sql, names, uid), label
+    assert seen["seller"] == {jordan}
+    assert seen["seller"] < seen["manager"] < seen["rvp"], "scope must widen seller < manager < RVP"
     rows = sql(f"SELECT count(*) AS n FROM {hier} WHERE {fn}(NULL, user_id)")
     assert int(rows[0]["n"]) == 0, "a NULL persona sees nothing"
 
 
-def test_admin_persona_sees_all(sql, names, persona):
-    persona(None, "admin")
-    for v, base in [("v_opportunity_pipeline", "gold_opportunity_pipeline"),
-                    ("v_seller_kpis", "gold_seller_kpis")]:
-        assert _owners(sql, names, v) == _owners(sql, names, base), v
-
-
-def test_unmapped_caller(sql, names, persona):
-    """No map row: account admins see everything, everyone else sees nothing."""
-    persona(None, None)
-    for v, base in [("v_opportunity_pipeline", "gold_opportunity_pipeline"),
-                    ("v_seller_kpis", "gold_seller_kpis")]:
-        expected = _owners(sql, names, base) if _is_account_admin(sql) else set()
-        assert _owners(sql, names, v) == expected, v
-
-
-def test_base_gold_tables_unfiltered(sql, names, persona):
+def test_base_gold_tables_unfiltered(sql, names):
     """Ruling R2: gold tables carry no row filter, so Lakebase can sync every row."""
-    persona(_user_id(sql, names, "Jordan Rivera"), "seller")
     rows = sql(
         f"SELECT table_name FROM `{names['catalog']}`.information_schema.row_filters "
         "WHERE table_schema = :s",
         {"s": names["schema"]},
     )
     assert not [r for r in rows if r["table_name"].startswith("gold_")]
-    assert len(_owners(sql, names, "gold_opportunity_pipeline")) > 1
 
 
 # --------------------------------------------------------------------------- masks and tags
@@ -193,29 +103,31 @@ def test_base_gold_tables_unfiltered(sql, names, persona):
 
 def test_masks_attached(sql, names):
     rows = sql(
-        f"SELECT column_name, mask_name FROM `{names['catalog']}`.information_schema.column_masks "
-        "WHERE table_schema = :s AND table_name = 'silver_contacts'",
+        f"SELECT table_name, column_name, mask_name FROM `{names['catalog']}`.information_schema.column_masks "
+        "WHERE table_schema = :s",
         {"s": names["schema"]},
     )
-    masks = {r["column_name"]: r["mask_name"] for r in rows}
-    assert set(masks) >= {"email", "phone", "mobile_phone"}, masks
-    assert all(m.endswith("fn_mask_pii") for m in masks.values()), masks
+    masks = {(r["table_name"], r["column_name"]): r["mask_name"] for r in rows}
+    for table, cols in PII_COLUMNS.items():
+        for col in cols:
+            assert (masks.get((table, col)) or "").endswith("fn_mask_pii"), (table, col, masks)
 
 
 def test_email_masked(sql, names):
     if sql("SELECT is_account_group_member('superapp_revops') AS g")[0]["g"] == "true":
         pytest.skip("caller is in superapp_revops, so sees raw values")
-    rows = sql(f"SELECT email, phone FROM {_fq(names, 'silver_contacts')} WHERE email IS NOT NULL")
-    assert rows
-    bad_email = [r["email"] for r in rows if not MASKED_EMAIL.match(r["email"])]
-    assert not bad_email, f"unmasked emails: {bad_email[:5]}"
-    bad_phone = [r["phone"] for r in rows if r["phone"] and not MASKED_PHONE.match(r["phone"])]
-    assert not bad_phone, f"unmasked phones: {bad_phone[:5]}"
+    for table in PII_COLUMNS:
+        rows = sql(f"SELECT email, phone FROM {fq(names, table)} WHERE email IS NOT NULL")
+        assert rows, table
+        bad_email = [r["email"] for r in rows if not MASKED_EMAIL.match(r["email"])]
+        assert not bad_email, f"{table}: unmasked emails: {bad_email[:5]}"
+        bad_phone = [r["phone"] for r in rows if r["phone"] and not MASKED_PHONE.match(r["phone"])]
+        assert not bad_phone, f"{table}: unmasked phones: {bad_phone[:5]}"
 
 
 def test_mask_function_paths(sql, names):
     """fn_mask_pii_for(v, privileged) shows both paths without needing group membership."""
-    fn = _fq(names, "fn_mask_pii_for")
+    fn = fq(names, "fn_mask_pii_for")
     rows = sql(
         f"SELECT {fn}('jane.doe@acme.example', true) AS e_raw, "
         f"{fn}('jane.doe@acme.example', false) AS e_masked, "
@@ -227,23 +139,43 @@ def test_mask_function_paths(sql, names):
     assert rows["n"] is None
 
 
+def test_mask_matches_core(sql, names):
+    """fn_mask_pii inlines fn_mask_pii_for (nested UDFs break incremental refresh); keep in sync."""
+    if sql("SELECT is_account_group_member('superapp_revops') AS g")[0]["g"] == "true":
+        pytest.skip("caller is in superapp_revops")
+    m, core = fq(names, "fn_mask_pii"), fq(names, "fn_mask_pii_for")
+    rows = sql(
+        f"SELECT count(*) AS n FROM (SELECT explode(array('jane.doe@acme.example', '(415) 555-0123', "
+        f"'no digits', '', NULL, 'a@b')) AS v) WHERE NOT ({m}(v) <=> {core}(v, false))"
+    )
+    assert int(rows[0]["n"]) == 0
+
+
 def test_pii_tags_present(sql, names):
     """`pii` is an account-governed tag here (allowed values ssn/address only), so the PII
     flag is the governed boolean tag contains_pii=true plus the system class.* tags."""
     rows = sql(
-        f"SELECT column_name, tag_name, tag_value FROM `{names['catalog']}`.information_schema.column_tags "
-        "WHERE schema_name = :s AND table_name = 'silver_contacts'",
+        f"SELECT table_name, column_name, tag_name, tag_value "
+        f"FROM `{names['catalog']}`.information_schema.column_tags WHERE schema_name = :s",
         {"s": names["schema"]},
     )
-    tags = {(r["column_name"], r["tag_name"]): r["tag_value"] for r in rows}
-    for col in ["email", "phone", "mobile_phone"]:
-        assert tags.get((col, "contains_pii")) == "true", (col, tags)
-    assert ("email", "class.email_address") in tags
-    assert ("phone", "class.phone_number") in tags and ("mobile_phone", "class.phone_number") in tags
+    tags = {(r["table_name"], r["column_name"], r["tag_name"]): r["tag_value"] for r in rows}
+    expected = dict(PII_COLUMNS)
+    expected.update({
+        "bronze_contact": ["Email", "Phone", "MobilePhone"],
+        "bronze_lead": ["Email", "Phone"],
+        "silver_transcripts": ["attendees"],
+    })
+    for table, cols in expected.items():
+        for col in cols:
+            assert tags.get((table, col, "contains_pii")) == "true", (table, col)
+    for table in PII_COLUMNS:
+        assert (table, "email", "class.email_address") in tags, table
+        assert (table, "phone", "class.phone_number") in tags, table
 
 
 def test_governed_objects_commented(sql, names):
-    objs = GOVERNED_VIEWS + ["demo_identity_map"]
+    objs = list(GOVERNED_VIEWS) + ["demo_identity_map"]
     rows = sql(
         f"SELECT table_name, comment FROM `{names['catalog']}`.information_schema.tables "
         "WHERE table_schema = :s",

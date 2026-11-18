@@ -11,4 +11,5 @@ pythonpath = ["src"]
 testpaths = ["tests"]
 markers = [
     "integration: needs the Databricks CLI profile and live workspace access",
+    "governance_mutating: rewrites the caller's demo_identity_map row; opt-in (-m governance_mutating or FLEETWISE_GOVERNANCE_MUTATING=1)",
 ]
