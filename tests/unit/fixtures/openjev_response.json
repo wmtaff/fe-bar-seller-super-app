@@ -1,0 +1,49 @@
+{
+  "model": "databricks-openjev-qwen35-4b",
+  "answers": {
+    "close_this_quarter": {
+      "type": "score",
+      "score": 3.3990158706271227,
+      "confidence": 0.5537380512961017,
+      "legend": {
+        "0": "Very unlikely",
+        "1": "Unlikely",
+        "2": "Possible",
+        "3": "Likely",
+        "4": "Very likely"
+      },
+      "probabilities": {
+        "0": 0.0005471110905768481,
+        "1": 0.0016852207994247266,
+        "2": 0.06323745903819768,
+        "3": 0.46726510453590037,
+        "4": 0.46726510453590037
+      }
+    },
+    "next_action": {
+      "type": "choice",
+      "choice": "send_proposal",
+      "confidence": 0.644183928849584,
+      "probabilities": {
+        "send_proposal": 0.7034866073746533,
+        "multithread": 0.0009333724310542401,
+        "schedule_demo": 0.0008236982793632208,
+        "exec_sponsor": 0.0009333724310542401,
+        "address_risk": 0.2932568304875101,
+        "nurture": 0.0005661189963649127
+      }
+    },
+    "competitive_risk": {
+      "type": "noul",
+      "noul": 0.7057850278370112
+    },
+    "churn_risk": {
+      "type": "noul",
+      "noul": 0.04742586913845881
+    }
+  },
+  "usage": {
+    "input_tokens": 1507,
+    "output_tokens": 0
+  }
+}
