@@ -20,9 +20,18 @@ RETURN CASE
   ELSE '***'
 END;
 
--- The column mask attached to silver_contacts.email and .phone: raw values only for the
--- account group superapp_revops.
+-- The column mask attached to the silver PII columns: raw values only for the account group
+-- superapp_revops (by design nobody is in it here: everyone sees masked values). The body
+-- repeats fn_mask_pii_for instead of calling it: a mask that calls another SQL UDF fails in
+-- the pipeline's incremental refresh ("INTERNAL_ERROR Cannot generate code for expression
+-- fn_mask_pii_for"). test_mask_matches_core keeps the two in sync.
 CREATE OR REPLACE FUNCTION fn_mask_pii(v STRING)
 RETURNS STRING
-COMMENT 'Column mask for contact email/phone: unmasked only for members of account group superapp_revops; everyone else sees j***@domain.com / ***-***-1234.'
-RETURN fn_mask_pii_for(v, is_account_group_member('superapp_revops'));
+COMMENT 'Column mask for contact/lead email and phone: unmasked only for members of account group superapp_revops; everyone else sees j***@domain.com / ***-***-1234. Same logic as fn_mask_pii_for(v, is_account_group_member(''superapp_revops'')).'
+RETURN CASE
+  WHEN v IS NULL THEN NULL
+  WHEN is_account_group_member('superapp_revops') THEN v
+  WHEN v LIKE '%_@_%' THEN concat(left(v, 1), '***@', substring_index(v, '@', -1))
+  WHEN v RLIKE '[0-9]' THEN concat('***-***-', right(regexp_replace(v, '[^0-9]', ''), 4))
+  ELSE '***'
+END;
