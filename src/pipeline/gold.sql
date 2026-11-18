@@ -2,7 +2,7 @@
 -- All day-based measures are relative to the data as-of date (latest opportunity
 -- LastModifiedDate; 2026-11-16 per ruling R7), never current_date(), so the demo is stable.
 -- Fiscal year starts Feb 1: fiscal_quarter = FYyyQn, e.g. 2026-11-16 -> FY27Q4.
--- No row filters here (ruling R2): Task 4 adds secure views and masks. CDF is on for
+-- No row filters here (ruling R2): Task 4 adds dynamic views (owner-rights, filters on current_user()) and masks. CDF is on for
 -- every gold table (Lakebase synced tables need it).
 
 -- --------------------------------------------------------------------------- helpers
@@ -324,9 +324,9 @@ CREATE OR REFRESH MATERIALIZED VIEW gold_contacts_masked (
   name STRING COMMENT 'Contact full name.',
   title STRING COMMENT 'Contact job title.',
   buyer_role STRING COMMENT 'Buying-committee role: VP Operations, Fleet Manager, Safety Director, CFO, IT.',
-  email STRING COMMENT 'Masked email: first letter + *** + @domain, e.g. j***@acme.com. PII - raw value only in silver_contacts.',
+  email STRING COMMENT 'Masked email: first letter + *** + @domain, e.g. j***@acme.com. PII - raw value only in bronze_contact (silver_contacts is UC-masked).',
   email_domain STRING COMMENT 'Email domain of the contact (not PII).',
-  phone STRING COMMENT 'Masked phone: ***-***-<last 4 digits>. PII - raw value only in silver_contacts.',
+  phone STRING COMMENT 'Masked phone: ***-***-<last 4 digits>. PII - raw value only in bronze_contact (silver_contacts is UC-masked).',
   mobile_phone STRING COMMENT 'Masked mobile phone: ***-***-<last 4 digits>.',
   mailing_state STRING COMMENT 'US state of the contact.',
   owner_id STRING COMMENT 'User Id of the seller who owns the contact (same as the account owner).',

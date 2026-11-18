@@ -2,7 +2,10 @@
 -- Salesforce masters are deduplicated to the latest row per Id (LastModifiedDate, then
 -- ingest time). Opportunities use AUTO CDC (SCD type 1) sequenced by LastModifiedDate,
 -- because increments re-emit full rows for changed opps.
--- silver_contacts.email/phone carry UC column masks (Task 4); gold_contacts_masked masks inline for Lakebase.
+-- PII: silver_contacts (email, phone, mobile_phone) and silver_leads (email, phone) carry the UC
+-- column mask fn_mask_pii (Task 4); raw values exist only in bronze_*. bronze/silver are
+-- producer-only (no consumer grants; src/governance/grants.sql). gold_contacts_masked masks
+-- inline for Lakebase.
 
 -- --------------------------------------------------------------------------- users
 CREATE OR REFRESH MATERIALIZED VIEW silver_users (
@@ -176,10 +179,32 @@ FROM bronze_opportunity_history
 QUALIFY row_number() OVER (PARTITION BY Id ORDER BY _ingested_at DESC) = 1;
 
 -- --------------------------------------------------------------------------- leads
+-- email and phone carry the UC column mask fn_mask_pii (same as silver_contacts).
 CREATE OR REFRESH MATERIALIZED VIEW silver_leads (
+  lead_id STRING COMMENT 'Salesforce Lead Id (18-char). Primary key.',
+  first_name STRING COMMENT 'Lead first name.',
+  last_name STRING COMMENT 'Lead last name.',
+  name STRING COMMENT 'Lead full name.',
+  company STRING COMMENT 'Company the lead works for.',
+  title STRING COMMENT 'Lead job title.',
+  email STRING MASK ${uc_schema}.fn_mask_pii COMMENT 'Lead email. PII: UC column mask fn_mask_pii, raw only for superapp_revops.',
+  phone STRING MASK ${uc_schema}.fn_mask_pii COMMENT 'Lead phone. PII: UC column mask fn_mask_pii, raw only for superapp_revops.',
+  lead_source STRING COMMENT 'Lead source (Web, Trade Show, Partner, ...).',
+  status STRING COMMENT 'Lead status: Working, Nurturing, Qualified, Unqualified. Outcome field - masked out of lead scoring (ruling R11).',
+  industry STRING COMMENT 'Industry vertical of the lead''s company.',
+  state STRING COMMENT 'US state of the lead.',
+  country STRING COMMENT 'Country of the lead.',
+  fleet_size INT COMMENT 'Number of vehicles the lead''s company operates.',
+  products_of_interest ARRAY<STRING> COMMENT 'Fleetwise products the lead is interested in.',
+  description STRING COMMENT 'Free-text lead description.',
+  owner_id STRING COMMENT 'User Id of the seller who owns the lead.',
+  is_converted BOOLEAN COMMENT 'Whether the lead converted. Outcome field - masked out of lead scoring (ruling R11).',
+  converted_date DATE COMMENT 'Conversion date. Outcome field - masked out of lead scoring (ruling R11).',
+  created_date TIMESTAMP COMMENT 'When the lead was created.',
+  last_modified_date TIMESTAMP COMMENT 'Last CRM modification.',
   CONSTRAINT valid_id EXPECT (lead_id IS NOT NULL) ON VIOLATION DROP ROW
 )
-COMMENT 'Silver: inbound leads, latest row per Id. Status values include Working, Nurturing, Qualified, Unqualified.'
+COMMENT 'Silver: inbound leads, latest row per Id. Status values include Working, Nurturing, Qualified, Unqualified. email and phone are PII with UC column masks (fn_mask_pii).'
 AS SELECT
   Id AS lead_id,
   FirstName AS first_name,
