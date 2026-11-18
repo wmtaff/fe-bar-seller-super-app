@@ -92,14 +92,30 @@ def test_rule_competitor_expiring_present(sql, fq):
     assert int(r["expected"]) >= 1 and r["expected"] == r["actual"], r
 
 
+def _feedback_factors(sql, fq) -> str:
+    """SQL for (action_type, factor) from Task 8's gold_nba_feedback, empty while it does not exist.
+    The factor is clamp(0.5 + acceptance_rate, 0.5, 1.5); action types without feedback use 1.0."""
+    cat, sch = (p.strip("`") for p in fq.split("."))
+    exists = sql(f"""SELECT count(*) AS n FROM `{cat}`.information_schema.tables
+                     WHERE table_schema = :s AND table_name = 'gold_nba_feedback'""", {"s": sch})
+    if int(exists[0]["n"]) == 0:
+        return "SELECT CAST(NULL AS STRING) AS action_type, CAST(NULL AS DOUBLE) AS factor WHERE false"
+    return f"""SELECT action_type, least(1.5, greatest(0.5, 0.5 + avg(acceptance_rate))) AS factor
+               FROM {fq}.gold_nba_feedback WHERE acceptance_rate IS NOT NULL GROUP BY action_type"""
+
+
 def test_priority_score_formula(sql, fq):
-    # with no feedback yet, priority = acv * p_close_quarter * urgency (urgency in {1.0, 1.2, 1.5})
+    # priority = acv * p_close_quarter * urgency (urgency in {1.0, 1.2, 1.5}) * feedback factor.
+    # writeback_merge runs right before next_best_actions, so the factor the NBA run used is the
+    # one in gold_nba_feedback now (unless write-back was re-run on its own since).
     r = _one(sql, f"""
+        WITH fb AS ({_feedback_factors(sql, fq)})
         SELECT count_if(abs(n.priority_score / nullif(o.acv * coalesce(s.p_close_quarter, o.probability / 100.0), 0)
-                            - u) > 1e-6) AS bad, count(*) AS n
+                            - u * coalesce(fb.factor, 1.0)) > 1e-6) AS bad, count(*) AS n
         FROM {fq}.gold_next_best_actions n
         JOIN {fq}.gold_opportunity_pipeline o USING (opportunity_id)
         LEFT JOIN {fq}.gold_deal_scores s USING (opportunity_id)
+        LEFT JOIN fb ON fb.action_type = n.action_type
         LATERAL VIEW explode(array(CASE
           WHEN n.action_type = 'competitor_expiring' THEN 1.5
           WHEN datediff(n.due_date, (SELECT to_date(max(last_modified_date)) FROM {fq}.gold_opportunity_pipeline)) <= 7 THEN 1.5

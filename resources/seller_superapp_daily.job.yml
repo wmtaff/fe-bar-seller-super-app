@@ -28,6 +28,12 @@ resources:
         - environment_key: scoring_env
           spec:
             client: "4"
+        # w.postgres (synced tables) needs databricks-sdk >= 0.81; pinned to the version tested locally
+        - environment_key: lakebase_env
+          spec:
+            client: "4"
+            dependencies:
+              - databricks-sdk==0.167.0
         - environment_key: eval_env
           spec:
             client: "4"
@@ -140,11 +146,27 @@ resources:
               - "16"
               - --src-dir
               - ${workspace.file_path}/src
+        # Task 8: write-back. Seller decisions from the app (Lakebase app.seller_actions, landed in
+        # UC by Lakehouse Sync) -> silver_seller_actions -> gold_nba_feedback + NBA status. Runs
+        # before next_best_actions so this run's ranking uses the fresh acceptance rates. No-op
+        # (empty targets) until the app creates schema app (Task 10).
+        - task_key: writeback_merge
+          depends_on:
+            - task_key: ai_scoring
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../src/lakebase/writeback.sql
+              source: WORKSPACE
+            parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+              lakebase_catalog: ${var.lakebase_catalog}
         # Task 7: next best actions + gold_opportunity_app (pipeline joined with deal scores), both
         # rebuilt by MERGE with stable keys (R3, R17). Lakebase (Task 8) syncs them into the app.
         - task_key: next_best_actions
           depends_on:
-            - task_key: ai_scoring
+            - task_key: writeback_merge
           sql_task:
             warehouse_id: ${var.warehouse_id}
             file:
@@ -153,6 +175,26 @@ resources:
             parameters:
               catalog: ${var.catalog}
               schema: ${var.schema}
+        # Task 8: refresh the Lakebase synced tables (gold -> Postgres schema serving) and wait.
+        - task_key: lakebase_sync
+          depends_on:
+            - task_key: next_best_actions
+          environment_key: lakebase_env
+          spark_python_task:
+            python_file: ../src/lakebase/setup_lakebase.py
+            parameters:
+              - --action
+              - sync
+              - --catalog
+              - ${var.catalog}
+              - --schema
+              - ${var.schema}
+              - --serving-schema
+              - ${var.serving_schema}
+              - --project
+              - ${var.lakebase_project}
+              - --lakebase-catalog
+              - ${var.lakebase_catalog}
         # Task 7: offline score evaluation (~400 OpenJev calls + MLflow), only when run_eval=true.
         - task_key: check_run_eval
           depends_on:

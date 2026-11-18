@@ -128,8 +128,11 @@ def test_app_tables_cdf_pk_merge(table):
 
 # --------------------------------------------------------------------------- job wiring
 def test_job_runs_nba_after_scoring():
-    t = _tasks()["next_best_actions"]
-    assert _deps(t) == {"ai_scoring": None}
+    # Task 8: writeback_merge (after ai_scoring) sits in between so the ranking uses fresh feedback
+    tasks = _tasks()
+    t = tasks["next_best_actions"]
+    assert _deps(t) == {"writeback_merge": None}
+    assert _deps(tasks["writeback_merge"]) == {"ai_scoring": None}
     assert t["sql_task"]["file"]["path"] == "../src/ai/next_best_actions.sql"
     assert t["sql_task"]["parameters"] == {"catalog": "${var.catalog}", "schema": "${var.schema}"}
 
