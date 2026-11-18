@@ -14,6 +14,9 @@ resources:
         # Output goes to /Volumes/<catalog>/<schema>/<volume>/<dataset_version>/ (rulings R10, R12, R13: v4).
         - name: dataset_version
           default: v4
+        # "true" runs the offline score evaluation (evaluate_scores) after next_best_actions.
+        - name: run_eval
+          default: "false"
       environments:
         - environment_key: generator_env
           spec:
@@ -25,6 +28,11 @@ resources:
         - environment_key: scoring_env
           spec:
             client: "4"
+        - environment_key: eval_env
+          spec:
+            client: "4"
+            dependencies:
+              - mlflow-skinny==3.18.0
       tasks:
         - task_key: generate_data
           environment_key: generator_env
@@ -130,5 +138,44 @@ resources:
               - ${var.schema}
               - --max-workers
               - "16"
+              - --src-dir
+              - ${workspace.file_path}/src
+        # Task 7: next best actions + gold_opportunity_app (pipeline joined with deal scores), both
+        # rebuilt by MERGE with stable keys (R3, R17). Lakebase (Task 8) syncs them into the app.
+        - task_key: next_best_actions
+          depends_on:
+            - task_key: ai_scoring
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../src/ai/next_best_actions.sql
+              source: WORKSPACE
+            parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+        # Task 7: offline score evaluation (~400 OpenJev calls + MLflow), only when run_eval=true.
+        - task_key: check_run_eval
+          depends_on:
+            - task_key: next_best_actions
+          condition_task:
+            op: EQUAL_TO
+            left: "{{job.parameters.run_eval}}"
+            right: "true"
+        - task_key: evaluate_scores
+          depends_on:
+            - task_key: check_run_eval
+              outcome: "true"
+          environment_key: eval_env
+          spark_python_task:
+            python_file: ../jobs/evaluate_scores.py
+            parameters:
+              - --catalog
+              - ${var.catalog}
+              - --schema
+              - ${var.schema}
+              - --volume
+              - ${var.volume}
+              - --dataset-version
+              - "{{job.parameters.dataset_version}}"
               - --src-dir
               - ${workspace.file_path}/src

@@ -114,14 +114,14 @@ def test_nba_sources_rules_and_priority():
 def test_nba_feedback_is_optional():
     # gold_nba_feedback (Task 8) may not exist: only referenced through dynamic SQL after a check
     assert "information_schema.tables" in NBA_SQL and "EXECUTE IMMEDIATE" in NBA_SQL
-    static = re.sub(r"'[^']*'", "''", NBA_SQL)
-    assert "gold_nba_feedback" not in re.sub(r"--[^\n]*", "", static)
+    code = re.sub(r"--[^\n]*", "", NBA_SQL)  # comments first: they may hold apostrophes
+    assert "gold_nba_feedback" not in re.sub(r"'[^']*'", "''", code)
     assert re.search(r"least\(1\.5, greatest\(0\.5", NBA_SQL)
 
 
 @pytest.mark.parametrize("table", ["gold_next_best_actions", "gold_opportunity_app"])
 def test_app_tables_cdf_pk_merge(table):
-    ddl = NBA_SQL.split(f"CREATE TABLE IF NOT EXISTS {table}", 1)[1].split(";", 1)[0]
+    ddl = NBA_SQL.split(f"CREATE TABLE IF NOT EXISTS {table}", 1)[1].split("ALTER TABLE", 1)[0]
     assert "PRIMARY KEY" in ddl and "'delta.enableChangeDataFeed' = 'true'" in ddl
     assert re.search(rf"MERGE INTO {table}", NBA_SQL)
 
