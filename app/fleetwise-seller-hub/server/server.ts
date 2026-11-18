@@ -17,7 +17,8 @@ import {
 import * as Q from './lib/queries';
 
 /** demo_identity_map (UC). Names come from app.yaml env, never from the request. */
-const IDENTITY_MAP = `${ucIdent(process.env.UC_CATALOG, 'UC_CATALOG')}.${ucIdent(process.env.UC_SCHEMA, 'UC_SCHEMA')}.demo_identity_map`;
+const UC_PREFIX = `${ucIdent(process.env.UC_CATALOG, 'UC_CATALOG')}.${ucIdent(process.env.UC_SCHEMA, 'UC_SCHEMA')}`;
+const IDENTITY_MAP = `${UC_PREFIX}.demo_identity_map`;
 const PERSONA_TTL_MS = 30_000;
 
 interface Persona {
@@ -156,6 +157,23 @@ await createApp({
         const t0 = performance.now();
         await pg('SELECT 1');
         return { ok: true, latency_ms: Math.round((performance.now() - t0) * 10) / 10, at: new Date().toISOString() };
+      }));
+
+      // Second-principal governance check (R16): runs as the app SERVICE PRINCIPAL on the warehouse.
+      // Expected: the unfiltered base gold table is denied, the row-filtered view is readable.
+      app.get('/api/health/governance', handle(async () => {
+        const probe = async (table: string) => {
+          try {
+            const r = (await appkit.analytics.query(`SELECT count(*) AS n FROM ${UC_PREFIX}.${table}`)) as { data?: Row[] } | undefined;
+            return { table, ok: true, rows: num(r?.data?.[0]?.n) };
+          } catch (err) {
+            const m = (err as Error).message;
+            return { table, ok: false, error: /PERMISSION_DENIED|INSUFFICIENT_PERMISSIONS|TABLE_OR_VIEW_NOT_FOUND/.exec(m)?.[0] ?? m.slice(0, 200) };
+          }
+        };
+        const base = await probe('gold_opportunity_app');
+        const view = await probe('v_opportunity_pipeline');
+        return { principal: 'app service principal', base_table: base, view, pass: !base.ok && view.ok };
       }));
 
       app.get('/api/me', handle(async (req) => {
