@@ -33,7 +33,11 @@ GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_contacts_masked TO ${princip
 -- every seller is visible. The app reads it through Lakebase (synced, app-side scoping), so
 -- grant it directly only to the app SP; for Genie/seller users, wrap it in a v_* view first.
 -- GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_call_insights TO ${principal};
+-- gold_deal_scores and gold_lead_scores exist (Task 6). No PII (scored from allow-listed,
+-- non-PII fields), but not row-filtered: same rule as gold_call_insights (app SP only, or a
+-- v_* view for Genie/seller users).
 -- GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_deal_scores TO ${principal};
+-- GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_lead_scores TO ${principal};
 -- GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_next_best_actions TO ${principal};
 -- GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_opportunity_app TO ${principal};
 

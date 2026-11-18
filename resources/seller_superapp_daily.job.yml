@@ -21,6 +21,10 @@ resources:
             dependencies:
               # pinned so serverless output is byte-identical to local runs
               - faker==40.54.0
+        # scoring uses only what serverless ships (requests, databricks-sdk, pyspark)
+        - environment_key: scoring_env
+          spec:
+            client: "4"
       tasks:
         - task_key: generate_data
           environment_key: generator_env
@@ -111,3 +115,20 @@ resources:
             parameters:
               catalog: ${var.catalog}
               schema: ${var.schema}
+        # Task 6: OpenJev deal + lead scoring -> gold_deal_scores / gold_lead_scores. Incremental
+        # MERGE (only changed opps/leads are scored); fails only if > 5% of OpenJev calls fail.
+        - task_key: ai_scoring
+          depends_on:
+            - task_key: ai_call_insights
+          environment_key: scoring_env
+          spark_python_task:
+            python_file: ../jobs/run_scoring.py
+            parameters:
+              - --catalog
+              - ${var.catalog}
+              - --schema
+              - ${var.schema}
+              - --max-workers
+              - "16"
+              - --src-dir
+              - ${workspace.file_path}/src
