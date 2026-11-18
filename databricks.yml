@@ -19,6 +19,15 @@ variables:
   warehouse_id:
     description: SQL warehouse (Demo Warehouse).
     default: 9a6db1d12e2ee6d3
+  serving_schema:
+    description: UC schema (in the main catalog) for the Lakebase synced tables; also the Postgres schema name.
+    default: serving
+  lakebase_project:
+    description: Lakebase Autoscaling project id.
+    default: seller-superapp
+  lakebase_catalog:
+    description: Optional UC catalog on the Lakebase database (federated write-back fallback). Not registered here (needs CREATE CATALOG); writeback.sql skips it when absent.
+    default: fleetwise_lakebase
   profile:
     description: Databricks CLI profile used to deploy and run (informational; auth is set in the target).
     default: fevm-serverless-stable-s1omq8

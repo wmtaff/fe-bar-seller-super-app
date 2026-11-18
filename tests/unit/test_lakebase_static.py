@@ -34,15 +34,25 @@ def test_synced_table_list_matches_brief():
 
 def test_synced_table_spec_is_triggered_into_serving():
     cfg = _cfg()
-    spec = lb.synced_table_spec(cfg, lb.SYNCED_TABLES[0], existing_pipeline_id=None)
-    assert spec.source_table_full_name == "cat.sch.gold_account_360"
+    spec = lb.synced_table_spec(cfg, lb.SYNCED_TABLES[1], existing_pipeline_id=None)
+    assert spec.source_table_full_name == "cat.sch.gold_opportunity_app"
     assert spec.scheduling_policy.value == "TRIGGERED"
     assert spec.branch == "projects/seller-superapp/branches/production"
     assert spec.postgres_database == "databricks_postgres"
     assert spec.create_database_objects_if_missing is True
     # pipeline metadata goes to the regular UC catalog, never the Lakebase catalog
     assert (spec.new_pipeline_spec.storage_catalog, spec.new_pipeline_spec.storage_schema) == ("cat", "sch")
-    assert cfg.synced_table_name("account_360") == "synced_tables/fleetwise_lakebase.serving.account_360"
+    assert cfg.synced_table_name("account_360") == "synced_tables/cat.serving.account_360"
+
+
+def test_materialized_views_snapshot_delta_tables_triggered():
+    # MV change data feed reads need external metadata, so the pipeline MVs sync by SNAPSHOT
+    policy = {t.pg_table: t.policy for t in lb.SYNCED_TABLES}
+    assert {k for k, v in policy.items() if v == "SNAPSHOT"} == {
+        "account_360", "seller_kpis", "user_hierarchy", "contacts"}
+    assert set(policy.values()) == {"SNAPSHOT", "TRIGGERED"}
+    snap = lb.synced_table_spec(_cfg(), lb.SYNCED_TABLES[0], existing_pipeline_id=None)
+    assert snap.scheduling_policy.value == "SNAPSHOT"
 
 
 def test_later_synced_tables_share_one_pipeline():

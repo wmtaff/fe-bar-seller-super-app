@@ -1,0 +1,10 @@
+# Task 8: UC schema that holds the Lakebase synced-table entries. Its name is also the Postgres
+# schema the synced tables land in (synced_table_id = {catalog}.{schema}.{table} ->
+# Postgres "{schema}"."{table}"). A separate schema keeps the read-only serving copies out of the
+# governed seller_superapp schema.
+resources:
+  schemas:
+    serving:
+      catalog_name: ${var.catalog}
+      name: ${var.serving_schema}
+      comment: Fleetwise Seller Hub - Lakebase synced tables (read-only Postgres serving copies of gold tables).
