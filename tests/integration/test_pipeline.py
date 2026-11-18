@@ -8,7 +8,7 @@ import pytest
 
 pytestmark = pytest.mark.integration
 
-DATASET_VERSION = os.environ.get("FLEETWISE_DATASET_VERSION", "v3")
+DATASET_VERSION = os.environ.get("FLEETWISE_DATASET_VERSION", "v4")
 GOLD_SQL = Path(__file__).resolve().parents[2] / "src" / "pipeline" / "gold.sql"
 
 GOLD_TABLES = [
@@ -262,8 +262,40 @@ def test_jordan_kpis_plausible(sql, names):
     assert float(k[0]["quota"]) == 500000.0
     assert 3.0 <= float(k[0]["coverage_ratio"]) <= 4.0, k
     assert 0.25 <= float(k[0]["attainment_pct"]) / 100 <= 0.40, k
+
+
+def test_seller_kpis_sanity(sql, names):
+    """Ruling R13: quotas within the segment clamp, plausible past attainment, Morgan's team
+    spread <= 3x, and at least half of sellers with pipeline at 1.5-5x coverage."""
+    from fleetwise_gen.config import QUOTA_MAX_X, QUOTA_MIN_X, SEGMENT_QUOTA
+
+    t = _fq(names, "gold_seller_kpis")
+    quotas = sql(
+        f"SELECT DISTINCT owner_id, owner_name, segment, quota * 4 AS annual FROM {t} "
+        "WHERE owner_name NOT IN ('Jordan Rivera', 'Taylor Empty')"
+    )
+    bad = [
+        r for r in quotas
+        if not round(QUOTA_MIN_X * SEGMENT_QUOTA[r["segment"]], -4)
+        <= float(r["annual"]) <= round(QUOTA_MAX_X * SEGMENT_QUOTA[r["segment"]], -4)
+    ]
+    assert not bad, bad[:5]
+    att = sql(
+        f"SELECT percentile(attainment_pct, 0.9) AS p90, max(attainment_pct) AS mx FROM {t} "
+        "WHERE fiscal_quarter < 'FY27Q4'"
+    )[0]
+    print(f"past-quarter attainment p90={float(att['p90']):.1f}% max={float(att['mx']):.1f}%")
+    assert float(att["p90"]) <= 200 and float(att["mx"]) <= 400
+    morgan = _user_id(sql, names, "Morgan Lee")
+    team = sql(
+        f"SELECT DISTINCT owner_id, quota FROM {t} WHERE manager_id = :m", {"m": morgan}
+    )
+    q = [float(r["quota"]) for r in team]
+    assert len(q) == 8 and max(q) / min(q) <= 3, q
     org = sql(
         f"SELECT count(*) AS n, count_if(coverage_ratio BETWEEN 1.5 AND 5.0) AS ok "
-        f"FROM {_fq(names, 'gold_seller_kpis')} WHERE is_current_quarter AND open_pipeline_acv > 0"
+        f"FROM {t} WHERE is_current_quarter AND open_pipeline_acv > 0"
     )[0]
-    assert int(org["ok"]) >= 0.8 * int(org["n"]), org
+    share = int(org["ok"]) / int(org["n"])
+    print(f"org coverage in-band share={share:.3f} ({org['ok']}/{org['n']})")
+    assert share >= 0.5, org
