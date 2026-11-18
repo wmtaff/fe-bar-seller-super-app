@@ -144,7 +144,8 @@ call_competitors AS (
   -- competitors on any call, and the earliest competitor quote expiry mentioned in an objection
   SELECT c.opportunity_id,
          array_distinct(flatten(collect_list(c.competitors))) AS competitors,
-         min(try_to_date(regexp_extract(obj, '(\\d{4}-\\d{2}-\\d{2})', 1))) AS quote_expires
+         min(CASE WHEN lower(obj) RLIKE 'quot|valid|expir'
+                  THEN try_to_date(regexp_extract(obj, '(\\d{4}-\\d{2}-\\d{2})', 1)) END) AS quote_expires
   FROM calls c
   LEFT JOIN LATERAL (SELECT explode_outer(c.objections) AS obj) o
   GROUP BY c.opportunity_id
