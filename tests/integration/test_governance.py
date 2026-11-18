@@ -198,7 +198,7 @@ def test_masks_attached(sql, names):
         {"s": names["schema"]},
     )
     masks = {r["column_name"]: r["mask_name"] for r in rows}
-    assert set(masks) >= {"email", "phone"}, masks
+    assert set(masks) >= {"email", "phone", "mobile_phone"}, masks
     assert all(m.endswith("fn_mask_pii") for m in masks.values()), masks
 
 
@@ -228,13 +228,18 @@ def test_mask_function_paths(sql, names):
 
 
 def test_pii_tags_present(sql, names):
+    """`pii` is an account-governed tag here (allowed values ssn/address only), so the PII
+    flag is the governed boolean tag contains_pii=true plus the system class.* tags."""
     rows = sql(
-        f"SELECT column_name, tag_value FROM `{names['catalog']}`.information_schema.column_tags "
-        "WHERE schema_name = :s AND table_name = 'silver_contacts' AND tag_name = 'pii'",
+        f"SELECT column_name, tag_name, tag_value FROM `{names['catalog']}`.information_schema.column_tags "
+        "WHERE schema_name = :s AND table_name = 'silver_contacts'",
         {"s": names["schema"]},
     )
-    tags = {r["column_name"]: r["tag_value"] for r in rows}
-    assert tags.get("email") == "true" and tags.get("phone") == "true", tags
+    tags = {(r["column_name"], r["tag_name"]): r["tag_value"] for r in rows}
+    for col in ["email", "phone", "mobile_phone"]:
+        assert tags.get((col, "contains_pii")) == "true", (col, tags)
+    assert ("email", "class.email_address") in tags
+    assert ("phone", "class.phone_number") in tags and ("mobile_phone", "class.phone_number") in tags
 
 
 def test_governed_objects_commented(sql, names):

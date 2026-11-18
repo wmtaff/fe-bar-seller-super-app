@@ -43,10 +43,58 @@ resources:
               - "{{job.parameters.dataset_version}}"
               - --src-dir
               - ${workspace.file_path}/src
+        # Task 4 (ruling R2): governance objects the pipeline depends on come first.
+        - task_key: governance_setup
+          depends_on:
+            - task_key: generate_data
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../src/governance/setup.sql
+              source: WORKSPACE
+            parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+        # silver_contacts declares `MASK fn_mask_pii`, so the mask functions must exist first.
+        - task_key: governance_masks
+          depends_on:
+            - task_key: governance_setup
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../src/governance/masks.sql
+              source: WORKSPACE
+            parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
         # Task 3: refresh the bronze -> silver -> gold pipeline after new raw files land.
         - task_key: pipeline_refresh
           depends_on:
-            - task_key: generate_data
+            - task_key: governance_masks
           pipeline_task:
             pipeline_id: ${resources.pipelines.seller_superapp_pipeline.id}
             full_refresh: false
+        # Task 4: row-filter functions + governed views (they read gold_user_hierarchy).
+        - task_key: apply_governance
+          depends_on:
+            - task_key: pipeline_refresh
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../src/governance/row_filters.sql
+              source: WORKSPACE
+            parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
+        # Task 4: PII tags on pipeline tables and column comments on the governed views.
+        - task_key: governance_comments_tags
+          depends_on:
+            - task_key: apply_governance
+          sql_task:
+            warehouse_id: ${var.warehouse_id}
+            file:
+              path: ../src/governance/comments_tags.sql
+              source: WORKSPACE
+            parameters:
+              catalog: ${var.catalog}
+              schema: ${var.schema}
