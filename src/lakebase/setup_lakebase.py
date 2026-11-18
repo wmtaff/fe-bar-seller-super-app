@@ -73,6 +73,7 @@ class Config:
     pg_schema: str = "serving"                    # UC schema of the synced tables == their Postgres schema
     lakebase_catalog: str = "fleetwise_lakebase"  # optional UC catalog on the Lakebase database (fallback path)
     app_pg_schema: str = "app"                    # app-owned tables (created by the app SP, Task 10)
+    suspend_seconds: int = 300                    # scale-to-zero after 5 idle minutes
     cdf_config_id: str = "app_writeback"          # Lakehouse Sync config id ([a-z][a-z0-9_]*): Postgres `app` -> UC schema
 
     @property
@@ -150,6 +151,30 @@ def ensure_project(w, cfg: Config) -> None:
         project=Project(spec=ProjectSpec(display_name=cfg.project, pg_version=17)),
         project_id=cfg.project,
     ).wait(LroOptions(timeout=timedelta(minutes=20)))
+
+
+def ensure_scale_to_zero(w, cfg: Config) -> None:
+    """Primary endpoint suspends after cfg.suspend_seconds idle (the project default here is 24 h).
+    The demo is idle most of the time, and the app must recover from a cold endpoint (Task 10)."""
+    from databricks.sdk.common.lro import LroOptions
+    from databricks.sdk.common.types.fieldmask import FieldMask
+    from databricks.sdk.service.postgres import Duration, Endpoint, EndpointSpec, EndpointType
+
+    for ep in w.postgres.list_endpoints(parent=cfg.branch_path):
+        if not ep.status or ep.status.endpoint_type != EndpointType.ENDPOINT_TYPE_READ_WRITE:
+            continue
+        have = ep.status.suspend_timeout_duration
+        have_s = have.ToSeconds() if have is not None else None
+        if have_s == cfg.suspend_seconds:
+            log.info("endpoint %s suspends after %ss idle", ep.name, have_s)
+            continue
+        log.info("endpoint %s: suspend timeout %ss -> %ss", ep.name, have_s, cfg.suspend_seconds)
+        w.postgres.update_endpoint(
+            name=ep.name,
+            endpoint=Endpoint(spec=EndpointSpec(endpoint_type=EndpointType.ENDPOINT_TYPE_READ_WRITE,
+                                                suspend_timeout_duration=Duration(seconds=cfg.suspend_seconds))),
+            update_mask=FieldMask(field_mask=["spec.suspend_timeout_duration"]),
+        ).wait(LroOptions(timeout=timedelta(minutes=10)))
 
 
 def ensure_catalog(w, cfg: Config) -> None:
@@ -252,6 +277,7 @@ def ensure_cdf_config(w, cfg: Config) -> str:
 
 def setup(w, cfg: Config, with_cdf: bool = False, register_catalog: bool = False) -> None:
     ensure_project(w, cfg)
+    ensure_scale_to_zero(w, cfg)
     if register_catalog:
         ensure_catalog(w, cfg)
     # a table that joins an existing pipeline stays OFFLINE until that pipeline's next update
