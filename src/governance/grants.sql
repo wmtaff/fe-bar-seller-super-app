@@ -38,8 +38,15 @@ GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_contacts_masked TO ${princip
 -- v_* view for Genie/seller users).
 -- GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_deal_scores TO ${principal};
 -- GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_lead_scores TO ${principal};
+-- gold_next_best_actions and gold_opportunity_app exist (Task 7). Not row-filtered (every
+-- seller's actions / opportunities; gold_opportunity_app carries owner and account names): the
+-- app reads them through Lakebase synced tables with app-side scoping, so grant them directly
+-- only to the app SP; for Genie/seller users, wrap them in a v_* view first.
 -- GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_next_best_actions TO ${principal};
 -- GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_opportunity_app TO ${principal};
+-- gold_score_eval exists (Task 7): aggregate eval metrics only (no rows per customer, no PII);
+-- safe to grant for the deck/Genie, but it is not app-facing.
+-- GRANT SELECT ON TABLE `${catalog}`.`${schema}`.gold_score_eval TO ${principal};
 
 -- Functions: the views run with the view owner's rights, so a reader should NOT need
 -- EXECUTE on fn_can_see_owner / fn_current_persona / fn_can_see_owner_for / fn_mask_pii.
