@@ -1,5 +1,5 @@
 -- Bronze: raw files from the generator, ingested incrementally with Auto Loader.
--- Reads ONLY ${raw_root} (= /Volumes/<catalog>/<schema>/<volume>/v3, rulings R10, R12).
+-- Reads ONLY ${raw_root} (= /Volumes/<catalog>/<schema>/<volume>/v4, rulings R10, R12, R13).
 -- Never reads <version>/_eval (ground truth) or <version>/_manifest.
 -- Salesforce objects land as strings (like a raw SFDC export); silver casts types.
 

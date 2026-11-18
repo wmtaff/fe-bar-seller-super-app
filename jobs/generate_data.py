@@ -1,9 +1,9 @@
 """Job entrypoint (task `generate_data`): write one generator batch to the UC volume.
 
 Params: --catalog --schema --volume --mode {init,increment} --batch {N|auto} [--seed 42]
-        [--dataset-version v3] [--src-dir <bundle files>/src]
+        [--dataset-version v4] [--src-dir <bundle files>/src]
 
-Output root: /Volumes/<c>/<s>/<v>/<dataset_version>/ (rulings R10/R12: v3; v1 at the volume root and v2 are
+Output root: /Volumes/<c>/<s>/<v>/<dataset_version>/ (rulings R10/R12/R13: v4; v1 at the volume root, v2 and v3 are
 left untouched).
 Idempotent: if <root>/_manifest/batch=<NNNN>.json exists the batch
 is skipped. Files are generated on local disk, then copied into the volume with
@@ -43,7 +43,7 @@ def main() -> None:
     ap.add_argument("--mode", choices=["init", "increment"], default="init")
     ap.add_argument("--batch", default="0")
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--dataset-version", default="v3")
+    ap.add_argument("--dataset-version", default="v4")
     ap.add_argument("--src-dir", default=None)
     a = ap.parse_args()
     _add_src(a.src_dir)

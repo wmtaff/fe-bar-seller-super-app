@@ -1,4 +1,4 @@
-# Lakeflow Spark Declarative Pipeline: raw/v3 files -> bronze_* -> silver_* -> gold_* (Task 3).
+# Lakeflow Spark Declarative Pipeline: raw/v4 files -> bronze_* -> silver_* -> gold_* (Task 3).
 resources:
   pipelines:
     seller_superapp_pipeline:
@@ -11,8 +11,8 @@ resources:
       photon: true
       channel: CURRENT
       configuration:
-        # Only the v3 dataset (rulings R10, R12); _eval/ and _manifest/ are never read.
-        raw_root: /Volumes/${var.catalog}/${var.schema}/${var.volume}/v3
+        # Only the v4 dataset (rulings R10, R12, R13); _eval/ and _manifest/ are never read.
+        raw_root: /Volumes/${var.catalog}/${var.schema}/${var.volume}/v4
       libraries:
         - file:
             path: ../src/pipeline/bronze.sql
