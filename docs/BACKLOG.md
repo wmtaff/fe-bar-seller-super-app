@@ -13,3 +13,4 @@
   - In TALK_TRACK/CHEAT_SHEET: replace the "12.38x" note and the KPI placeholders with real values.
   - Fix QA T11 test counts (27 unit / 11 integration and growing), and align QA B4 ("by week 3") with the talk track (weeks 4–6).
   - Create docs/VALUE_MODEL.md (Task 12) using the deck's assumptions, including the conservative column (~9-month payback).
+- [ ] **Masked silver is what the pipeline reads (Task 4).** `silver_contacts` and `silver_leads` carry UC column masks, and the pipeline runs as a principal outside any unmasking group, so every downstream pipeline table sees masked email/phone (`f***@domain`, `***-***-1234`). Any future join or dedupe on raw email/phone (e.g. matching transcript attendees to contacts) must read `bronze_contact` / `bronze_lead` instead, inside the pipeline.
