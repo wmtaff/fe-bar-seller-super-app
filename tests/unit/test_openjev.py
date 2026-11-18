@@ -214,3 +214,16 @@ def test_select_pending_scores_only_changed_rows():
     }
     pending = scoring_job.select_pending(cur, prev, "v1")
     assert [r["key"] for r in pending] == ["new", "state_changed", "newer_input", "failed_before", "old_questions"]
+
+
+def test_call_retries_any_request_exception():
+    # ruling R20: transport errors other than Timeout/ConnectionError (e.g. a dropped chunked
+    # response) are retried too, and surface as OpenJevError, never as a raw requests error.
+    seq = [requests.exceptions.ChunkedEncodingError("reset"), _resp(200, FIXTURE)]
+    with mock.patch("requests.post", side_effect=seq) as post:
+        openjev.call({}, DEAL_QUESTIONS, host=HOST, token="t")
+    assert post.call_count == 2
+    with mock.patch("requests.post", side_effect=requests.exceptions.InvalidJSONError("x")) as post:
+        with pytest.raises(openjev.OpenJevError, match="InvalidJSONError"):
+            openjev.call({}, DEAL_QUESTIONS, host=HOST, token="t")
+    assert post.call_count == openjev.MAX_ATTEMPTS
