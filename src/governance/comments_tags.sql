@@ -18,6 +18,20 @@ SET TAG ON COLUMN silver_contacts.email `class.email_address`;
 SET TAG ON COLUMN silver_contacts.phone `class.phone_number`;
 SET TAG ON COLUMN silver_contacts.mobile_phone `class.phone_number`;
 
+SET TAG ON COLUMN silver_leads.email contains_pii = true;
+SET TAG ON COLUMN silver_leads.phone contains_pii = true;
+SET TAG ON COLUMN silver_leads.email `class.email_address`;
+SET TAG ON COLUMN silver_leads.phone `class.phone_number`;
+
+-- Raw PII upstream: bronze keeps the raw CRM values (no mask; producer-only, no consumer
+-- grants), and transcript attendees are raw emails.
+SET TAG ON COLUMN bronze_contact.Email contains_pii = true;
+SET TAG ON COLUMN bronze_contact.Phone contains_pii = true;
+SET TAG ON COLUMN bronze_contact.MobilePhone contains_pii = true;
+SET TAG ON COLUMN bronze_lead.Email contains_pii = true;
+SET TAG ON COLUMN bronze_lead.Phone contains_pii = true;
+SET TAG ON COLUMN silver_transcripts.attendees contains_pii = true;
+
 -- Column comments on the governed views: none needed here. `CREATE OR REPLACE VIEW ... AS
 -- SELECT * FROM gold_...` (row_filters.sql) inherits every gold column comment, and the
 -- view-level COMMENT is set in that DDL (verified by test_governed_objects_commented).
