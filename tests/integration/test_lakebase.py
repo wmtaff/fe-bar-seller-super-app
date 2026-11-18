@@ -196,6 +196,71 @@ def test_writeback_roundtrip(ws, sql, pg, cfg):
     assert int(gone[0]["n"]) == 0
 
 
+def _history_exists(sql, cfg) -> bool:
+    return int(sql(f"""SELECT count(*) AS n FROM `{cfg.catalog}`.information_schema.tables
+                       WHERE table_schema = :s AND table_name = 'lb_seller_actions_history'""",
+                   {"s": cfg.schema})[0]["n"]) > 0
+
+
+def test_writeback_merge_on_simulated_history(ws, sql, cfg):
+    """Exercises writeback.sql's Lakehouse Sync path before the app exists: a temporary test double
+    of lb_seller_actions_history (same CDC columns as the real one, verified on a probe schema)
+    with insert / update pre+post image / insert+delete, then deletes that clean everything up.
+    Skipped once the real history table exists (Task 10); test_writeback_roundtrip covers it then."""
+    if _history_exists(sql, cfg):
+        pytest.skip("the real lb_seller_actions_history exists; covered by test_writeback_roundtrip")
+    a, b = sql(f"""SELECT action_id, opportunity_id, action_type FROM (
+                     SELECT *, row_number() OVER (PARTITION BY action_type ORDER BY action_id) AS rn
+                     FROM {cfg.fq}.gold_next_best_actions WHERE status = 'open')
+                   WHERE rn = 1 ORDER BY action_type LIMIT 2""")
+    ids = (a["action_id"], b["action_id"])
+
+    def rows(*changes):
+        return ", ".join(
+            f"('{ct}', {lsn}, 0, current_timestamp(), {lsn}, {i}, '{r['action_id']}', "
+            f"'{r['opportunity_id']}', '{TEST_PERSONA}', '{dec}', 'simulation', TIMESTAMP'2026-01-01 00:00:{i % 60:02d}')"
+            for ct, lsn, i, r, dec in changes)
+
+    def state():
+        silver = sql(f"SELECT id, decision, action_type FROM {cfg.fq}.silver_seller_actions "
+                     f"WHERE persona_user_id = :p ORDER BY id", {"p": TEST_PERSONA})
+        fb = {r["action_type"]: r for r in sql(f"SELECT * FROM {cfg.fq}.gold_nba_feedback "
+                                               f"WHERE accepted + done + dismissed > 0")}
+        st = {r["action_id"]: r["status"] for r in sql(
+            f"SELECT action_id, status FROM {cfg.fq}.gold_next_best_actions WHERE action_id IN (:a, :b)",
+            {"a": ids[0], "b": ids[1]})}
+        return silver, fb, st
+
+    hist = f"{cfg.fq}.lb_seller_actions_history"
+    sql(f"""CREATE TABLE {hist} (_pg_change_type STRING, _pg_lsn BIGINT, _pg_xid INT,
+              _timestamp TIMESTAMP_NTZ, _sort_by BIGINT, id BIGINT, action_id STRING, opportunity_id STRING,
+              persona_user_id STRING, decision STRING, reason STRING, created_at TIMESTAMP)
+            COMMENT 'TEMPORARY test double of the Lakehouse Sync history (test_lakebase); dropped by the test.'""")
+    try:
+        sql(f"INSERT INTO {hist} VALUES " + rows(
+            ("insert", 100, 1, a, "accepted"), ("insert", 110, 2, b, "dismissed"),
+            ("update_preimage", 120, 2, b, "dismissed"), ("update_postimage", 120, 2, b, "done"),
+            ("insert", 130, 3, a, "dismissed"), ("delete", 140, 3, a, "dismissed")))
+        _run_writeback_task(ws)
+        silver, fb, st = state()
+        assert [(r["id"], r["decision"]) for r in silver] == [("1", "accepted"), ("2", "done")], silver
+        assert [r["action_type"] for r in silver] == [a["action_type"], b["action_type"]]
+        assert float(fb[a["action_type"]]["acceptance_rate"]) == 1.0 and fb[a["action_type"]]["accepted"] == "1"
+        assert float(fb[b["action_type"]]["acceptance_rate"]) == 1.0 and fb[b["action_type"]]["done"] == "1"
+        assert st == {ids[0]: "accepted", ids[1]: "done"}, st
+        _run_writeback_task(ws)  # idempotent re-run
+        assert state()[0] == silver
+        # deletes upstream remove the rows downstream and reset the NBA status
+        sql(f"INSERT INTO {hist} VALUES " + rows(("delete", 150, 1, a, "accepted"), ("delete", 160, 2, b, "done")))
+        _run_writeback_task(ws)
+        silver, fb, st = state()
+        assert silver == [] and a["action_type"] not in fb and b["action_type"] not in fb, (silver, fb)
+        assert set(st.values()) == {"open"}, st
+    finally:
+        sql(f"DROP TABLE IF EXISTS {hist}")
+    _run_writeback_task(ws)  # no source again: no-op path
+
+
 def test_nba_feedback_contract(sql, cfg):
     # Task 7 consumes gold_nba_feedback(action_type STRING, acceptance_rate DOUBLE in 0..1)
     cols = {r["col_name"]: r["data_type"] for r in sql(f"DESCRIBE TABLE {cfg.fq}.gold_nba_feedback")

@@ -73,7 +73,7 @@ class Config:
     pg_schema: str = "serving"                    # UC schema of the synced tables == their Postgres schema
     lakebase_catalog: str = "fleetwise_lakebase"  # optional UC catalog on the Lakebase database (fallback path)
     app_pg_schema: str = "app"                    # app-owned tables (created by the app SP, Task 10)
-    cdf_config_id: str = "app-writeback"          # Lakehouse Sync config: Postgres `app` -> UC schema
+    cdf_config_id: str = "app_writeback"          # Lakehouse Sync config id ([a-z][a-z0-9_]*): Postgres `app` -> UC schema
 
     @property
     def project_path(self) -> str:
@@ -220,8 +220,10 @@ def _check_spec(cfg: Config, spec: SyncedSpec, st) -> None:
 def ensure_cdf_config(w, cfg: Config) -> str:
     """Lakehouse Sync (Beta): Postgres schema `app` -> UC {catalog}.{schema}.lb_<table>_history.
 
-    Created only when the app schema has tables (Task 10: the app SP creates and owns it at
-    startup). Returns a status string for the log/evidence.
+    The Postgres schema must already exist (the API rejects a missing one with "CdfConfig not
+    found: Postgres schema ..."), so this runs in Task 10 after the app SP has created and owns
+    schema `app`. Tables added to the schema later are picked up automatically. Returns a status
+    string for the log/evidence.
     """
     from databricks.sdk.common.lro import LroOptions
     from databricks.sdk.errors import NotFound
@@ -242,6 +244,9 @@ def ensure_cdf_config(w, cfg: Config) -> str:
         cdf_config=CdfConfig(catalog=cfg.catalog, schema=cfg.schema, postgres_schema=cfg.app_pg_schema),
         cdf_config_id=cfg.cdf_config_id,
     ).wait(LroOptions(timeout=timedelta(minutes=20)))
+    cfg_name = f"{parent}/cdf-configs/{cfg.cdf_config_id}"
+    for st in w.postgres.list_cdf_statuses(parent=cfg_name):  # statuses live under the config
+        log.info("lakehouse sync %s -> %s: %s", st.postgres_table, st.uc_table, st.state)
     return "created"
 
 
