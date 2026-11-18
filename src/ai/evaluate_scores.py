@@ -15,8 +15,10 @@ As-of reconstruction (only data dated <= snapshot_date):
   * opportunity: stage, amount, close date and forecast category from the latest
     silver_opportunity_history row created by the snapshot; stage age from that row; activity
     recency and 30-day count from completed activities up to the snapshot; days_to_close and
-    is_current_quarter relative to the snapshot. CRM next_step is dropped (only its current value
-    exists). competitor, products, fleet size and type are taken as recorded (set at creation).
+    is_current_quarter relative to the snapshot. The CRM next_step and competitor fields are
+    dropped: only their current values exist, and the generator back-fills competitor on lost deals
+    at close time (an outcome leak). Pre-snapshot competitor mentions still reach the state through
+    the as-of call insights. Products, fleet size and type are taken as recorded.
   * account: Customer/ARR/products owned from the account's Closed Won opps closed before the
     snapshot; usage from silver_usage_daily windows ending at the snapshot (null before the usage
     history starts); open tickets = created by the snapshot and not solved by then; P1s in the
@@ -201,7 +203,8 @@ SELECT s.opportunity_id, s.snapshot_date, s.true_intent, s.is_won, o.account_id,
   datediff(s.snapshot_date, to_date(h.entered_at)) AS stage_age_days,
   datediff(s.snapshot_date, to_date(act.last_activity_at)) AS days_since_last_activity,
   CAST(coalesce(act.activities_30d, 0) AS INT) AS activities_30d,
-  h.forecast_category, o.competitor, o.products, o.fleet_size, CAST(NULL AS STRING) AS next_step
+  h.forecast_category, CAST(NULL AS STRING) AS competitor, o.products, o.fleet_size,
+  CAST(NULL AS STRING) AS next_step
 FROM eval_sample s
 JOIN gold_opportunity_pipeline o ON o.opportunity_id = s.opportunity_id
 JOIN hist h ON h.opportunity_id = s.opportunity_id

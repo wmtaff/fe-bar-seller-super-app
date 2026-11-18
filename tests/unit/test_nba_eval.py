@@ -143,3 +143,11 @@ def test_eval_runs_only_when_run_eval_true():
     assert _deps(t["check_run_eval"]) == {"next_best_actions": None}
     assert _deps(t["evaluate_scores"]) == {"check_run_eval": "true"}
     assert t["evaluate_scores"]["spark_python_task"]["python_file"] == "../jobs/evaluate_scores.py"
+
+
+def test_eval_state_drops_post_close_crm_fields():
+    # the generator back-fills the CRM competitor on lost deals at close time and next_step is
+    # only known as of today: both would leak the outcome into the as-of state
+    sql = ev.OPPS_AS_OF_SQL
+    assert "o.competitor" not in sql and "o.next_step" not in sql
+    assert "CAST(NULL AS STRING) AS competitor" in sql and "CAST(NULL AS STRING) AS next_step" in sql
