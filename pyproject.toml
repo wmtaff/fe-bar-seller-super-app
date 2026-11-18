@@ -12,4 +12,5 @@ testpaths = ["tests"]
 markers = [
     "integration: needs the Databricks CLI profile and live workspace access",
     "governance_mutating: rewrites the caller's demo_identity_map row; opt-in (-m governance_mutating or FLEETWISE_GOVERNANCE_MUTATING=1)",
+    "after_app: needs the app-owned Postgres schema `app` (created by the app SP in Task 10); skips until then",
 ]
