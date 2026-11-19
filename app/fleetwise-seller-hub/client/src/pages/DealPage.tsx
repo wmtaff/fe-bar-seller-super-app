@@ -50,6 +50,20 @@ const PRODUCTS: [string, string][] = [
 
 const s = (v: unknown) => (v === null || v === undefined || v === '' ? '–' : str(v));
 
+/** Prospects (no ARR, no telemetry) get a "prospect" panel instead of empty usage bars. */
+const isProspect = (a: Row) => !Number(a.arr) && a.active_vehicles_30d == null && asList(a.products_owned).length === 0;
+
+function ProductChips({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5 text-xs">
+      <span className="text-muted-foreground">{title}:</span>
+      {items.length === 0 ? <span className="text-muted-foreground">none</span> : items.map((p) => (
+        <Badge key={p} variant="secondary">{p}</Badge>
+      ))}
+    </div>
+  );
+}
+
 function ListBlock({ title, items }: { title: string; items: string[] }) {
   return (
     <div>
@@ -160,12 +174,24 @@ export function DealPage() {
           <CardHeader>
             <CardTitle><h3>Account usage and products</h3></CardTitle>
             <CardDescription>
-              {a ? `${s(a.industry)} · ${s(a.fleet_size)} vehicles · ARR ${usd(a.arr)} · usage as of ${s(a.usage_as_of)}` : 'Account 360'}
+              {!a
+                ? 'Account 360'
+                : isProspect(a)
+                  ? `${s(a.industry)} · ${s(a.fleet_size)} vehicles · Prospect (no ARR yet)`
+                  : `${s(a.industry)} · ${s(a.fleet_size)} vehicles · ARR ${usd(a.arr)} · usage as of ${s(a.usage_as_of)}`}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             {!a ? (
               <EmptyState title="No account data" />
+            ) : isProspect(a) ? (
+              <>
+                <p className="text-muted-foreground">
+                  Prospect: not a customer yet, so there is no product telemetry. The whole product line is
+                  whitespace for this deal.
+                </p>
+                <ProductChips title="Whitespace" items={asList(a.whitespace_products)} />
+              </>
             ) : (
               <>
                 <div className="flex flex-wrap gap-4 text-xs">
@@ -179,9 +205,8 @@ export function DealPage() {
                     <ProbBar value={a[col] as number | null} label={`${name} adoption (30d)`} />
                   </div>
                 ))}
-                <div className="text-xs text-muted-foreground">
-                  Owned: {s(a.products_owned)} · Whitespace: {s(a.whitespace_products)}
-                </div>
+                <ProductChips title="Owned" items={asList(a.products_owned)} />
+                <ProductChips title="Whitespace" items={asList(a.whitespace_products)} />
               </>
             )}
           </CardContent>
