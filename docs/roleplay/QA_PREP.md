@@ -8,22 +8,22 @@
 - **The handling pattern (use it every time):** acknowledge → answer at the asker's altitude → show proof → bridge to value → check ("Does that answer it?").
 - **Never argue.** If the objection is fair, say "That's fair" and turn it into a pilot success criterion.
 - **Translate across.** After a technical answer, give the exec one sentence. After a business answer, give the architect one sentence. The cross-fire section has scripts.
-- **Placeholders** in `[[double brackets]]` are numbers not yet measured. The full list is at the end.
+- **Numbers** are from the committed evidence (`evidence/01`–`11`, `docs/VALUE_MODEL.md`). The full list, with sources, is at the end. AUC, lift and extraction are measured against the generator's planted truth, not real-world accuracy.
 - Competitor names used in the demo data are fictional: **RoadLynx, FleetCore, Trackwell**. Don't name real vendors; say "a point revenue-intelligence vendor" or "a conversation-intelligence tool."
 
 ## Part 1: Business persona (CRO / VP RevOps)
 
 ### B1. "We already pay for Salesforce. Why would I pay Databricks on top?"
 
-**Answer:** You keep Salesforce as the system of record for opportunities and accounts. What this replaces are the add-on layers on top of it: the revenue-intelligence and analytics seats, the separate forecasting tool and the email tool. At list prices of roughly $75–$220 per user per month, that's about $1.08M a year across 600 sellers at the midpoint. The Databricks run cost is an assumption today of $150K–$250K a year, and the pilot replaces that with a measured number.
+**Answer:** You keep Salesforce as the system of record for opportunities and accounts. What this replaces are the add-on layers on top of it: the revenue-intelligence and analytics seats and the separate forecasting tool (the email tool follows once email drafting, on the roadmap, lands). At list prices of roughly $75–$220 per user per month, that's about $1.08M a year across 600 sellers at the midpoint. The Databricks run cost is an assumption of $150K–$250K a year at full scale; at demo scale we measured about $1.15 per incremental run (an estimate), and the pilot replaces the assumption with billed cost.
 
-**Artifact:** Value arithmetic table in the talk track; `[[job cost per run: evidence/job_cost.md]]`.
+**Artifact:** Value arithmetic table in the talk track; measured run cost (~1.65 DBU ≈ $1.15 per incremental run, ≈ $10K/yr if hourly; estimate) in `docs/VALUE_MODEL.md`.
 
 **Bridge:** "So it's not 'on top.' It's instead of the add-ons, at a fraction of their cost."
 
 ### B2. "What's the ROI and payback, really?"
 
-**Answer:** On seat retirement alone, using my midpoint assumption: about $1.08M a year saved, against roughly $150K of build and pilot effort and about $200K a year to run. That's payback in about four months. I deliberately don't put the seller-time or win-rate numbers in the payback math, because those need to be proven. The pilot measures prep time and NBA adoption so we can add them with evidence.
+**Answer:** On seat retirement alone, using my midpoint assumption: about $1.08M a year saved, against roughly $150K of build and pilot effort and about $200K a year to run. That's payback in about four months (about nine months in the conservative case). I deliberately don't put the seller-time or win-rate numbers in the payback math, because those need to be proven. The pilot measures prep time and NBA adoption so we can add them with evidence.
 
 **Artifact:** Value arithmetic table; pilot success criteria.
 
@@ -39,7 +39,7 @@
 
 ### B4. "How long until my sellers actually get value?"
 
-**Answer:** Six weeks to a decision with real Fleetwise data. Week 1 we connect Salesforce read-only and the other sources. By week 3, the pilot sellers are using it. Weeks 4–6 we measure. The reason it's fast is that we're not building infrastructure. We're configuring managed services and pointing the app at your data.
+**Answer:** Six weeks to a decision with real Fleetwise data. Week 1 we connect Salesforce read-only and the other sources. Weeks 2–3 we stand up the Hub on your data and calibrate the score on your closed deals. Weeks 4–6, about 40 sellers and 4 managers use it daily and we measure every week. Week 6 is the go / no-go. The reason it's fast is that we're not building infrastructure. We're configuring managed services and pointing the app at your data.
 
 **Artifact:** Pilot timeline table in the talk track.
 
@@ -49,15 +49,15 @@
 
 **Answer:** Two things. First, it's designed around one question sellers already ask every Monday, "where do I spend my week," and it answers faster than what they have now. Second, we don't have to guess. Every accept and dismiss writes back, so you'll see adoption per rep and per action type, not just logins. In the pilot, the bar is 70% weekly active and at least 30% of actions accepted.
 
-**Artifact:** NBA write-back demo; Manager view adoption column; `gold_nba_feedback`.
+**Artifact:** NBA write-back demo; `gold_nba_feedback` (adoption per rep and action type; a team roll-up screen is on the roadmap).
 
 **Bridge:** "For the first time, you'll know whether your sales tooling changes behavior."
 
 ### B6. "Can I trust the forecast numbers in here?"
 
-**Answer:** The numbers come straight from your Salesforce data, through one governed pipeline, with data-quality checks. In our runs, zero rows failed them. Managers see the same numbers sellers see, so there's no "my spreadsheet vs your dashboard." The AI score is an input to the forecast, not a replacement, and we measure it against deals whose outcome we know: AUC of `[[AUC: evidence/score_eval.md]]` on held-out deals.
+**Answer:** The numbers come straight from your Salesforce data, through one governed pipeline, with data-quality checks. In our runs, zero rows failed them. Managers see the same numbers sellers see, so there's no "my spreadsheet vs your dashboard." The AI score is an input to the forecast, not a replacement, and we measure it against deals whose outcome we know: AUC of 0.695 on 400 held-out closed deals, with top-decile lift of 2.06×.
 
-**Artifact:** `evidence/02_pipeline.md` expectations table; `evidence/score_eval.md`.
+**Artifact:** `evidence/02_pipeline.md` expectations table; `evidence/06_nba_and_eval.md`.
 
 **Bridge:** "One number, one source, and you can trace any number back to the opportunity it came from."
 
@@ -79,9 +79,9 @@
 
 ### B9. "AI makes things up. How accurate is it?"
 
-**Answer:** We separate the two AI jobs. For reading calls, the AI fills a strict schema (next steps, competitors, open items) and we spot-check it against signals we know are in the calls: `[[extraction precision/recall: evidence/call_insights.md]]`. For scoring, we use a classifier that returns probabilities rather than generated text, and we measure it on held-out deals. In the app, every AI output shows its "why," and Genie shows its SQL. Nothing is a black box.
+**Answer:** We separate the two AI jobs. For reading calls, the AI fills a strict schema (next steps, competitors, open items) and we check it against signals we planted in the calls: competitor precision and recall of 1.00 / 1.00 across 287 planted mentions. For scoring, we use a classifier that returns probabilities rather than generated text, and we measure it on held-out deals. In the app, every AI output shows its "why," and Genie shows its SQL. Nothing is a black box.
 
-**Artifact:** `evidence/score_eval.md`; Deal 360 "why" chips; Genie "Show SQL."
+**Artifact:** `evidence/06_nba_and_eval.md`; Deal 360 "why" chips; Genie "Show SQL."
 
 **Bridge:** "We measure accuracy before we ask anyone to trust it, and the pilot re-measures it on your data."
 
@@ -121,7 +121,7 @@
 
 **Answer:** That's right, and I've labeled them that way on purpose. Every assumption has a measurement attached in the pilot: your actual contract line items for seats, a before-and-after survey plus app telemetry for time, and NBA acceptance and win rate on scored deals. What *is* measured today is the technical side: freshness, latency and score accuracy on test data.
 
-**Artifact:** Placeholder list mapped to evidence files.
+**Artifact:** Measured-numbers list mapped to evidence files (end of this doc).
 
 **Bridge:** "Give me six weeks and I'll swap every assumption for your number."
 
@@ -131,7 +131,7 @@
 
 **Answer:** Two reasons: access pattern and writes. The app does lots of small, per-user point lookups ("Jordan's deals," "this account") and needs millisecond responses for 600 concurrent users. That's an OLTP pattern, which Postgres handles well and an analytic warehouse doesn't. And the app writes (accepts, dismisses, notes), which needs a transactional database. The warehouse is still used where it fits: Genie and the analytics run there.
 
-**Artifact:** `[[Lakebase p95 read ms: evidence/lakebase.md]]` vs the 90-second CRMA views; spec section 5 trade-offs table.
+**Artifact:** Lakebase adds 6.3 ms over the network baseline for a deal lookup (0.07 ms server-side; `evidence/07_lakebase.md`) vs the 90-second CRMA views; spec section 5 trade-offs table.
 
 **Bridge (exec):** "That's the difference between a 90-second dashboard and a page that loads before the seller blinks."
 
@@ -169,25 +169,25 @@
 
 ### T6. "Write-back: what happens if the app writes while a sync is running? How do you avoid conflicts?"
 
-**Answer:** The app never writes to synced tables. It writes only to its own native Postgres tables (`app.seller_actions`, `app.notes`), so there's no conflict with the sync. Reads in the app combine the two, so a seller sees their accept instantly. The Lakebase database is registered in Unity Catalog, and a job task MERGEs those rows into Delta, keyed on action ID, so it's idempotent and safe to re-run. Lakehouse-side feedback is eventually consistent at the job cadence, which is fine for ranking and reporting.
+**Answer:** The app never writes to synced tables. It writes only to its own native Postgres tables (`app.seller_actions`, `app.notes`), so there's no conflict with the sync. Reads in the app combine the two, so a seller sees their accept instantly. Lakehouse Sync streams those rows (Postgres CDC) into a Unity Catalog history table, so an app write lands in Delta in about a minute (59 s measured), and the job's `writeback_merge` task MERGEs them into `silver_seller_actions`, keyed on action ID, so it's idempotent and safe to re-run.
 
-**Artifact:** `writeback_merge` task in the job; `silver_seller_actions`, `gold_nba_feedback`; `[[write round-trip ms: evidence/lakebase.md]]`.
+**Artifact:** `writeback_merge` task in the job; `silver_seller_actions`, `gold_nba_feedback`; 59.1 s app-write → Delta round trip (CDC 16.2 s; `evidence/07_lakebase.md`).
 
-**Bridge (exec):** "Sellers see their action instantly, and your reporting picks it up on the next refresh."
+**Bridge (exec):** "Sellers see their action instantly, and it's in the lakehouse about a minute later."
 
 ### T7. "How do you evaluate the AI, and how do you catch drift?"
 
-**Answer:** The synthetic data has a hidden ground truth for every deal and lead, stored separately and never fed to the AI. We score closed deals as of their pre-close snapshot and compute AUC, lift by decile and calibration, logged to MLflow: `[[AUC]]`, `[[top-decile lift]]`. For extraction, we spot-check transcripts against signals we planted. In production, the same evaluation runs on your real closed-won and closed-lost deals every cycle, and we'd put data-quality monitoring on the score table to alert on drift in score distribution or calibration.
+**Answer:** The synthetic data has a hidden ground truth for every deal and lead, stored separately and never fed to the AI. We score closed deals as of their pre-close snapshot and compute AUC, lift by decile and calibration, logged to MLflow: AUC 0.695 and top-decile lift 2.06× on 400 held-out closed deals. For extraction, we check against signals we planted: competitor precision / recall 1.00 / 1.00 (287 mentions). In production, the same evaluation runs on your real closed-won and closed-lost deals every cycle, and we'd put data-quality monitoring on the score table to alert on drift in score distribution or calibration.
 
-**Artifact:** `evidence/score_eval.md`; `gold_score_eval`; `test_no_ground_truth_ingested` (passing).
+**Artifact:** `evidence/06_nba_and_eval.md`; `gold_score_eval`; `test_no_ground_truth_ingested` (passing).
 
 **Bridge (exec):** "We measure the AI every time it runs, so you know if it gets worse before your sellers do."
 
 ### T8. "ai_query on every transcript sounds expensive. And why a classifier for scoring instead of just asking the LLM?"
 
-**Answer:** Transcripts are processed incrementally, only new calls, in batch on serverless, so the cost scales with call volume, not with users: `[[ai_query cost per transcript: evidence/job_cost.md]]`. For scoring, a generative LLM is the wrong tool. It's costlier, and its "confidence" isn't a calibrated probability. OpenJev returns a calibrated probability for each answer with **zero output tokens**. In our spike, one scoring call used 287 input tokens and returned "send_proposal" at p = 0.89. You can rank by expected value on that, and it's cheap enough to re-score the whole open pipeline every run.
+**Answer:** Transcripts are processed incrementally, only new calls, in batch on serverless, so the cost scales with call volume, not with users. We didn't meter it per transcript; the upper bound is ~291 model-serving DBU for the initial 640-call extraction on a shared endpoint, and each increment only extracts new calls (40 in our batch 2). For scoring, a generative LLM is the wrong tool. It's costlier, and its "confidence" isn't a calibrated probability. OpenJev returns a calibrated probability for each answer with **zero output tokens**. In our spike, one scoring call used 287 input tokens and returned "send_proposal" at p = 0.89. You can rank by expected value on that, and it's cheap enough to re-score the whole open pipeline every run.
 
-**Artifact:** `docs/DECK_POINTS.md` OpenJev spike; spec section 5 trade-off; `[[OpenJev cost per scored opp]]`.
+**Artifact:** `docs/DECK_POINTS.md` OpenJev spike; spec section 5 trade-off; `evidence/05_scoring.md` (~1,424 input tokens per deal, 0 output tokens).
 
 **Bridge (exec):** "Use the expensive AI only where you need language. Use the cheap, precise one for the decisions."
 
@@ -211,7 +211,7 @@
 
 **Answer:** Yes. Everything is a **Databricks Asset Bundle**: the schema, volume, pipeline, job and app. `bundle validate` and `bundle deploy -t dev` are already in the evidence. Targets for staging and prod are just more blocks in the same file, with environment variables for workspace and catalog, and no workspace IDs in code. Unit tests on the generator and integration tests on the pipeline run in CI before deploy.
 
-**Artifact:** `evidence/task1_setup.md` (`Validation OK!`, deploy output); `tests/` (26 unit and 9 integration tests passing).
+**Artifact:** `evidence/task1_setup.md` (`Validation OK!`, deploy output); `evidence/11_tests.md` (full suite: 184 passed, 1 failed, 1 skipped; the failure found a real view-grant bug, fixed in code).
 
 **Bridge (exec):** "Changes go through review and testing like any other production software."
 
@@ -225,9 +225,9 @@
 
 ### T13. "Will it scale to 600 sellers hitting it Monday at 8 a.m.?"
 
-**Answer:** The heavy work happens in batch, not on page load: enrichment, scoring and ranking are precomputed by the job. Page loads are indexed point reads in Lakebase, which is the pattern Postgres scales best on, with autoscaling compute and connection pooling. The app tier is stateless, so it scales horizontally. In the pilot we'd load-test a Monday-morning spike at 600 concurrent users and set a p95 target. What I'll be honest about: we haven't load-tested yet; the demo numbers are single-user `[[Lakebase p95 read ms]]`.
+**Answer:** The heavy work happens in batch, not on page load: enrichment, scoring and ranking are precomputed by the job. Page loads are indexed point reads in Lakebase, which is the pattern Postgres scales best on, with autoscaling compute and connection pooling. The app tier is stateless, so it scales horizontally. In the pilot we'd load-test a Monday-morning spike at 600 concurrent users and set a p95 target. What I'll be honest about: we haven't load-tested yet; the demo numbers are single-user: Lakebase adds 6.3 ms over the network baseline (77.6 ms client p95 from a laptop).
 
-**Artifact:** `[[Lakebase p95 read ms: evidence/lakebase.md]]`; pilot latency criterion.
+**Artifact:** `evidence/07_lakebase.md`; pilot latency criterion.
 
 **Bridge (exec):** "We'll prove Monday-morning performance before your whole team depends on it."
 
@@ -246,17 +246,17 @@
 
 ### T15. "How accurate is Genie, and what stops it from returning wrong numbers or data someone shouldn't see?"
 
-**Answer:** Accuracy: Genie is grounded with UC table and column comments, join definitions, fiscal-calendar rules (FY27 Q4, ACV definitions, what "my pipeline" means) and trusted example SQL. We benchmark it on a fixed question set: `[[Genie benchmark x/N: evidence/genie.md]]`. Guardrails: it only queries the curated gold tables in its space, it runs as the signed-in user so row filters and masks apply, it's read-only, and it always shows its SQL. When it's wrong, we add a trusted example and re-run the benchmark.
+**Answer:** Accuracy: Genie is grounded with UC table and column comments, join definitions, fiscal-calendar rules (FY27 Q4, ACV definitions, what "my pipeline" means) and trusted example SQL. We benchmark it on a fixed question set: 9/10 correct, median 18.5 s; the one miss was a correct empty answer on a gap in the synthetic data. Guardrails: it only queries the curated gold tables in its space, it runs as the signed-in user so row filters and masks apply, it's read-only, and it always shows its SQL. When it's wrong, we add a trusted example and re-run the benchmark.
 
-**Artifact:** Genie space instructions and sample questions; "Show SQL" in the app; `evidence/genie.md`.
+**Artifact:** Genie space instructions and sample questions; "Show SQL" in the app; `evidence/08_genie.md`.
 
 **Bridge (exec):** "It's an analyst who shows their work and can't see anything you can't."
 
 ### T16. "How fresh is the data, end to end?"
 
-**Answer:** We measure it, rather than guess: one increment from file landed in the volume to visible in the app, `[[freshness: evidence/freshness.md]]` minutes. The pipeline runs triggered to save cost; continuous mode is a config change if you need lower latency on specific tables. Compared to the roughly two-hour batch and a live-API patch for 10–25 fields today, it's one path for all fields.
+**Answer:** We measure it, rather than guess: one increment from file landed in the volume to visible to the app (the Lakebase row it reads): 9.0 minutes (540.6 s). The pipeline runs triggered to save cost; continuous mode is a config change if you need lower latency on specific tables. Compared to the roughly two-hour batch and a live-API patch for 10–25 fields today, it's one path for all fields.
 
-**Artifact:** `evidence/freshness.md`; the freshness badge.
+**Artifact:** `evidence/10_e2e.md`; the freshness badge.
 
 **Bridge (exec):** "Sellers see changes in minutes, not hours, without paying for a live patch."
 
@@ -303,17 +303,18 @@
 6. **Never invent product features or dates.** If asked about a roadmap item, say "I'll check what's committed and get back to you." Don't speculate.
 7. **Bridge back.** After any "I'll get back to you," return to value: "What I can say today is that the seat savings alone carry the business case."
 
-## Placeholders in this prep
+## Measured numbers in this prep
 
-| Placeholder | Where the number comes from |
+| Number | Source |
 |---|---|
-| `[[AUC]]` | `evidence/score_eval.md` / `gold_score_eval` (MLflow run) |
-| `[[top-decile lift]]` | `evidence/score_eval.md` |
-| `[[extraction precision/recall]]` | `evidence/call_insights.md`: ~20-transcript spot-check vs planted signals |
-| `[[freshness]]` minutes | `evidence/freshness.md`: one increment timed end to end |
-| `[[Lakebase p95 read ms]]` | `evidence/lakebase.md`: timed app endpoint reads |
-| `[[write round-trip ms]]` | `evidence/lakebase.md`: read/write round-trip log |
-| `[[job cost per run]]` | `evidence/job_cost.md`: `system.billing.usage` for the daily job |
-| `[[ai_query cost per transcript]]` | `evidence/job_cost.md`: token usage ÷ transcripts processed |
-| `[[OpenJev cost per scored opp]]` | `evidence/job_cost.md`: scoring task cost ÷ open opps scored |
-| `[[Genie benchmark x/N]]` | `evidence/genie.md`: ~10 scripted benchmark questions |
+| AUC **0.695**; top-decile lift **2.06×** (80% vs 38.75% base, 400 held-out closed deals) | `evidence/06_nba_and_eval.md` |
+| Competitor extraction P/R **1.00 / 1.00** (287 planted mentions) | `evidence/06_nba_and_eval.md` |
+| Freshness **9.0 min** (540.6 s), file landed → the Lakebase row the app reads | `evidence/10_e2e.md` |
+| Lakebase **6.3 ms** added over network baseline (0.07 ms server-side; 77.6 ms client p95 from a laptop) | `evidence/07_lakebase.md` |
+| Write-back **59.1 s**, app write → Delta (CDC 16.2 s) | `evidence/07_lakebase.md` |
+| Run cost **~1.65 DBU ≈ $1.15** per incremental run (≈ $10K/yr if hourly; estimate) | `docs/VALUE_MODEL.md` |
+| `ai_query`: upper bound ~291 model-serving DBU for the initial 640-call extraction (shared endpoint) | `docs/VALUE_MODEL.md` |
+| OpenJev: ~1,424 input tokens per deal, 0 output tokens | `evidence/05_scoring.md` |
+| Genie **9/10**, median **18.5 s** | `evidence/08_genie.md` |
+| Payback **≈ 4 months** on seats (conservative ≈ 9 months) | `docs/VALUE_MODEL.md` |
+| Tests: **184 passed, 1 failed, 1 skipped** | `evidence/11_tests.md` |
