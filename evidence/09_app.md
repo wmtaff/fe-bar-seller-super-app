@@ -477,7 +477,21 @@ the Lakebase path (app-side scoping) and the Genie path (UC row filter) agree.
 ```
 In-region `SELECT 1` through the AppKit pool: 4.2 ms (vs ~71 ms from the laptop in evidence/07).
 
-SCALE_TO_ZERO_PLACEHOLDER
+### `GET /api/health/db` after scale-to-zero (review focus 5)
+No app or Lakebase traffic from 2026-11-19T02:43:07Z for 7 min (scale-to-zero is 300 s). The endpoint
+was then `IDLE` (`databricks postgres list-endpoints`):
+```json
+[{"name":"projects/seller-superapp/branches/production/endpoints/primary","state":"IDLE"}]
+```
+First call (cold start, endpoint resumes; the pooled connection was recycled transparently):
+```json
+{"ok":true,"latency_ms":765.9,"at":"2026-11-19T02:50:09.597Z"}
+```
+Next call (warm):
+```json
+{"ok":true,"latency_ms":5.2,"at":"2026-11-19T02:50:11.014Z"}
+```
+The app recovered on the first request with no error.
 
 ## Tests
 
