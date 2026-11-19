@@ -23,5 +23,10 @@
       "p99": 0.08
     }
   },
-  "measured_at": "2026-11-18T22:16:08+00:00"
+  "measured_at": "2026-11-19T02:31:40+00:00",
+  "writeback": {
+    "cdc_seconds": 16.2,
+    "path": "lakehouse_sync",
+    "roundtrip_seconds": 59.1
+  }
 }
