@@ -235,3 +235,30 @@ resources:
               - "{{job.parameters.dataset_version}}"
               - --src-dir
               - ${workspace.file_path}/src
+        # Task 11: last task - row counts, lineage edges, per-task timing and manifests ->
+        # /Volumes/.../evidence/run_<run_id>/evidence.json. NONE_FAILED so it still runs when
+        # evaluate_scores is excluded (run_eval=false).
+        - task_key: collect_evidence
+          depends_on:
+            - task_key: lakebase_sync
+            - task_key: governance_ai_views
+            - task_key: evaluate_scores
+          run_if: NONE_FAILED
+          environment_key: scoring_env
+          spark_python_task:
+            python_file: ../jobs/collect_evidence.py
+            parameters:
+              - --catalog
+              - ${var.catalog}
+              - --schema
+              - ${var.schema}
+              - --serving-schema
+              - ${var.serving_schema}
+              - --volume
+              - ${var.volume}
+              - --dataset-version
+              - "{{job.parameters.dataset_version}}"
+              - --run-id
+              - "{{job.run_id}}"
+              - --job-params
+              - "mode={{job.parameters.mode}} batch={{job.parameters.batch}}"
