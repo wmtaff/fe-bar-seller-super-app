@@ -16,6 +16,9 @@
 - [ ] **Masked silver is what the pipeline reads (Task 4).** `silver_contacts` and `silver_leads` carry UC column masks, and the pipeline runs as a principal outside any unmasking group, so every downstream pipeline table sees masked email/phone (`f***@domain`, `***-***-1234`). Any future join or dedupe on raw email/phone (e.g. matching transcript attendees to contacts) must read `bronze_contact` / `bronze_lead` instead, inside the pipeline.
 
 ## Open after Task 11/12 (2026-11-19)
+- [ ] **Re-apply the app SP's view grants (needs user approval):** the job's old `CREATE OR REPLACE VIEW` dropped them
+  (fixed: `ALTER VIEW`). Run `jobs/app_post_deploy.py`, then `pytest tests/integration/test_app.py`; run the job
+  once more and repeat the test to confirm grants survive (evidence/11_tests.md).
 - [ ] **Freshness:** move the idempotent governance DDL tasks (~36 s) off the critical path (run on deploy, not
   per batch), and trigger the job on file arrival instead of a schedule; 9.0 min today.
 - [ ] **Lineage gap:** `gold_opportunity_pipeline -> gold_deal_scores` isn't in UC lineage because OpenJev scoring

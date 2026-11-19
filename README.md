@@ -179,6 +179,8 @@ databricks apps deploy fleetwise-seller-hub --source-code-path /Workspace/Users/
 .venv/bin/python src/lakebase/setup_lakebase.py --action setup --with-cdf \
   --catalog serverless_stable_s1omq8_catalog --schema seller_superapp --profile fevm-serverless-stable-s1omq8
 
+# (re-run step 6's app_post_deploy.py whenever grants need re-applying; the job itself never grants)
+
 # 7. Tests (unit + live integration; governance_mutating tests are opt-in)
 .venv/bin/pytest -q -m "not governance_mutating"
 
@@ -206,6 +208,6 @@ its service principal plus on-behalf-of-user auth for Genie.
 | [`evidence/08_genie.md`](evidence/08_genie.md) | Genie answers 9/10 seller questions, row-scoped to the persona |
 | [`evidence/09_app.md`](evidence/09_app.md) | The app is RUNNING; SP grants, second-principal denial, API captures, Genie via OBO, 59.1 s write-back round trip |
 | [`evidence/10_e2e.md`](evidence/10_e2e.md) | The full job runs end to end on an increment; lineage connects bronze to the Lakebase table; 9.0-minute freshness; rerun parity |
-| [`evidence/11_tests.md`](evidence/11_tests.md) | The full unit + integration test suite passes |
+| [`evidence/11_tests.md`](evidence/11_tests.md) | Full suite: 184 of 185 pass; the 1 failure found a real bug (job view DDL dropped the app SP's view grants), fixed in code; the re-grant awaits user approval |
 | [`evidence/runs/`](evidence/runs/) | Raw JSON from `collect_evidence` (row counts, lineage edges, task timing) and the freshness measurement |
-| [`notebooks/01_walkthrough.ipynb`](notebooks/01_walkthrough.ipynb) | One deal followed through every layer, with executed text outputs |
+| [`notebooks/01_walkthrough.ipynb`](notebooks/01_walkthrough.ipynb) | One deal followed through every layer, with executed text outputs (run with `nbconvert --execute` as a client of the workspace: serverless SQL warehouse, Lakebase, Genie API, app API) |
