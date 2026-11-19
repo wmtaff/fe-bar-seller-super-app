@@ -52,8 +52,10 @@ test.describe.serial('Fleetwise Seller Hub smoke', () => {
     const input = page.getByPlaceholder('e.g. What is my open pipeline by stage this quarter?');
     await input.fill('What is my open pipeline by stage this quarter?');
     await input.press('Enter');
-    // A finished Genie answer renders its generated query / result table.
-    await expect(page.getByRole('table').or(page.getByText(/SELECT/i)).first()).toBeVisible({ timeout: 150_000 });
+    // A finished answer: the AI turn with a dollar figure, and its generated SQL attached (collapsed).
+    await expect(page.getByText('AI', { exact: true }).first()).toBeVisible({ timeout: 150_000 });
+    await expect(page.getByText(/\$[\d,]+/).first()).toBeVisible({ timeout: 150_000 });
+    await expect(page.locator('pre', { hasText: /SELECT/i }).first()).toBeAttached();
   });
 
   test('Empty persona shows the No open deals empty state', async ({ page }) => {

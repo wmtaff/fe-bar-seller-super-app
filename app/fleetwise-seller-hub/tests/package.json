@@ -1,0 +1,7 @@
+{
+  "name": "fleetwise-seller-hub-smoke",
+  "private": true,
+  "type": "module",
+  "description": "Playwright smoke tests for the deployed app. Separate package so the Databricks Apps build never installs Playwright.",
+  "devDependencies": { "@playwright/test": "1.56.1" }
+}

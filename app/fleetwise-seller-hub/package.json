@@ -23,7 +23,7 @@
     "sync": "appkit plugin sync --write --silent",
     "typegen": "appkit generate-types",
     "setup": "appkit setup --write",
-    "test:smoke": "npx -y @playwright/test@1.56.1 test"
+    "test:smoke": "npm --prefix tests install --no-audit --no-fund && cd tests && npx playwright test -c playwright.config.ts"
   },
   "keywords": [],
   "author": "",

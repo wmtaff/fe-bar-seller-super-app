@@ -7,12 +7,12 @@ import { defineConfig } from '@playwright/test';
 const token = process.env.DATABRICKS_TOKEN;
 
 export default defineConfig({
-  testDir: './tests',
+  testDir: '.',
   timeout: 180_000,
   expect: { timeout: 60_000 },
   workers: 1, // tests switch the shared persona row; run serially
   reporter: [['list']],
-  outputDir: '.smoke-test',
+  outputDir: '../.smoke-test',
   use: {
     baseURL: process.env.APP_URL,
     extraHTTPHeaders: token ? { Authorization: `Bearer ${token}` } : undefined,
