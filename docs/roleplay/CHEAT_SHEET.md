@@ -52,4 +52,4 @@ Opening must-do: ask **each** persona what they need. Closing must-do: repeat th
 | 12 | Jordan attainment **35.3%** (FY27Q4) | `evidence/09_app.md` |
 | 13 | Jordan coverage **3.5×**, 18 open deals | `evidence/09_app.md` |
 | 14 | Top deal (Solis Construction) P(close this quarter) **0.86** | `evidence/09_app.md` |
-| 15 | Tests: **184 passed, 1 failed, 1 skipped** (the failure found a real view-grant bug, fixed in code) | `evidence/11_tests.md` |
+| 15 | Tests: **187 passed, 0 failed, 1 skipped** (the view-grant bug the suite caught was fixed and re-verified) | `evidence/11_tests.md` |

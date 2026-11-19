@@ -313,7 +313,7 @@ What would stop us from starting the week after next?
 | Lakebase **6.3 ms** added over network baseline (0.07 ms server-side) | `evidence/07_lakebase.md` |
 | Genie **9/10**, median **18.5 s** | `evidence/08_genie.md` |
 | Run cost **~1.65 DBU ≈ $1.15** per incremental run (≈ $10K/yr if hourly; estimate) | `docs/VALUE_MODEL.md` |
-| Tests: **184 passed, 1 failed, 1 skipped** (the failure found a real view-grant bug, fixed in code) | `evidence/11_tests.md` |
+| Tests: **187 passed, 0 failed, 1 skipped** (the view-grant bug the suite caught was fixed and re-verified) | `evidence/11_tests.md` |
 
 ## Value arithmetic (assumptions, for reference)
 

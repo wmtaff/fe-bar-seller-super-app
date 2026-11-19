@@ -311,7 +311,7 @@ Also measured: Jordan Rivera FY27 Q4 35.3% attainment, 3.5× coverage, 18 open d
 ## Slide 16. Appendix B: architecture detail for the platform team
 
 - **Ingest:** Lakeflow Spark Declarative Pipeline. Auto Loader reads Salesforce-shaped exports, Meet JSON, usage and tickets from a UC volume → bronze → silver (AUTO CDC SCD1 on LastModifiedDate; expectations drop bad keys and dates) → gold. Production: the Lakeflow Connect Salesforce connector, same schemas.
-- **Measured:** 15,150 bronze → 15,000 unique silver opportunities; 0 expectation failures. Full test suite: 184 passed, 1 failed (it found a real view-grant bug, fixed in code), 1 skipped (evidence/11_tests.md).
+- **Measured:** 15,150 bronze → 15,000 unique silver opportunities; 0 expectation failures. Full test suite: 187 passed, 0 failed, 1 skipped (the view-grant bug the suite caught was fixed and re-verified) (evidence/11_tests.md).
 - **Govern:** Comments on every table and column; pii tag and column masks on contact email and phone; row filter on the seller → manager → RVP hierarchy; lineage from volume to app tables.
 - **Intelligence:** ai_query (Claude, strict JSON schema) → gold_call_insights. OpenJev classifier (calibrated probabilities, zero output tokens) → gold_deal_scores. gold_next_best_actions ranked by ACV × P(close) × urgency. Evaluation logged to MLflow.
 - **Serve:** Lakebase Postgres synced tables from UC (change data feed): account_360, opportunity_pipeline, next_best_actions, call_insights, seller_kpis. Contacts sync from a pre-masked view. The app writes only to native app.* tables.

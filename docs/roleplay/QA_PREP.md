@@ -211,7 +211,7 @@
 
 **Answer:** Yes. Everything is a **Databricks Asset Bundle**: the schema, volume, pipeline, job and app. `bundle validate` and `bundle deploy -t dev` are already in the evidence. Targets for staging and prod are just more blocks in the same file, with environment variables for workspace and catalog, and no workspace IDs in code. Unit tests on the generator and integration tests on the pipeline run in CI before deploy.
 
-**Artifact:** `evidence/task1_setup.md` (`Validation OK!`, deploy output); `evidence/11_tests.md` (full suite: 184 passed, 1 failed, 1 skipped; the failure found a real view-grant bug, fixed in code).
+**Artifact:** `evidence/task1_setup.md` (`Validation OK!`, deploy output); `evidence/11_tests.md` (full suite: 187 passed, 0 failed, 1 skipped (the view-grant bug the suite caught was fixed and re-verified)).
 
 **Bridge (exec):** "Changes go through review and testing like any other production software."
 
@@ -317,4 +317,4 @@
 | OpenJev: ~1,424 input tokens per deal, 0 output tokens | `evidence/05_scoring.md` |
 | Genie **9/10**, median **18.5 s** | `evidence/08_genie.md` |
 | Payback **≈ 4 months** on seats (conservative ≈ 9 months) | `docs/VALUE_MODEL.md` |
-| Tests: **184 passed, 1 failed, 1 skipped** | `evidence/11_tests.md` |
+| Tests: **187 passed, 0 failed, 1 skipped** | `evidence/11_tests.md` |

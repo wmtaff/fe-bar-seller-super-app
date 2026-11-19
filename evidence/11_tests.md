@@ -61,3 +61,10 @@ The full run re-ran the Lakebase measurements. They were not written over `evide
 because the README and evidence/07 quote the Task 10 numbers. This run: write-back round trip **32.5 s** (CDC
 12.6 s; Task 10: 59.1 s / 16.2 s); lookup client p95 78.9 ms; server execution p95 0.06 ms; added over the
 network p95 13.0 ms (Task 10: 6.3 ms), within the 50 ms budget.
+
+## Final re-run (2026-11-19, after the user-approved re-grant)
+
+1. `jobs/app_post_deploy.py` re-applied the app SP's grants (16 statements, SP only). Then `tests/integration/test_app.py` gave 5 passed, including the second-principal check (a base table is INSUFFICIENT_PERMISSIONS, `v_opportunity_pipeline` is readable).
+2. A full `seller_superapp_daily` run (95252289759977, `mode=increment batch=2`) SUCCEEDED. Afterwards `test_app.py` again gave 5 passed, so the `ALTER VIEW` fix keeps the grants across job runs.
+3. That run's `collect_evidence` wrote an empty row-count snapshot but reported SUCCESS. Cause: the SQL `startswith()` filter matched nothing on serverless job compute. Fixed in commit 1a586b7: the filter moved to Python, and an empty result now raises. Re-run 953272368127810 SUCCEEDED with a full snapshot. The rerun-parity test now ignores empty (invalid) snapshots.
+4. Full suite: `pytest -q -m "not governance_mutating"` gave **187 passed, 0 failed, 1 skipped, 9 deselected**.
