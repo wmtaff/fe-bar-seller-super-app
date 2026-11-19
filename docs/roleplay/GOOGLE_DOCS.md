@@ -1,6 +1,6 @@
 # Roleplay prep: Google Docs
 
-Generated 2026-11-18 from the markdown sources in this folder (private; not shared).
+Generated 2026-11-18 from the markdown sources in this folder and regenerated in place (same doc IDs) after the final docs pass (private; not shared).
 
 | Doc | Source | URL |
 |---|---|---|

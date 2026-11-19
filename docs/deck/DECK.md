@@ -290,15 +290,14 @@ Closed loop: every Accept / Dismiss is written to Lakebase, merged back into the
 
 ## Slide 15. Appendix A: measurements and sources
 
-| Measured in the build | Value | Source | Used on slide |
-|---|---|---|---|
-| Freshness, file landed → Lakebase row the app reads | 9.0 min (540.6 s) | evidence/10_e2e.md | 6 |
-| Lakebase lookup latency | 6.3 ms added over network baseline (0.07 ms server-side) | evidence/07_lakebase.md | 8 |
-| Write-back, app write → Delta | 59.1 s round trip (CDC 16.2 s) | evidence/07_lakebase.md | 8 |
-| Run cost | ~1.65 DBU ≈ $1.15 per incremental run (≈ $10K / yr if hourly; estimate) | docs/VALUE_MODEL.md | 7, 11 |
-| Deal score AUC and top-decile lift | 0.695 and 2.06× (400 held-out closed deals) | evidence/06_nba_and_eval.md | 9 |
-| Competitor extraction precision / recall | 1.00 / 1.00 (287 planted mentions) | evidence/06_nba_and_eval.md | 9 |
-| Genie benchmark | 9/10, median 18.5 s | evidence/08_genie.md | 9 |
+| Measured in the build | Source | Used on slide |
+|---|---|---|
+| Freshness: 9.0 min (540.6 s), file landed → Lakebase row the app reads | evidence/10_e2e.md | 6 |
+| Lakebase: 6.3 ms added over network baseline (0.07 ms server-side); write-back app → Delta 59.1 s | evidence/07_lakebase.md | 8 |
+| Run cost: ~1.65 DBU ≈ $1.15 per incremental run (≈ $10K / yr if hourly; estimate) | docs/VALUE_MODEL.md | 7, 11 |
+| Deal score: AUC 0.695, top-decile lift 2.06× (400 held-out closed deals) | evidence/06_nba_and_eval.md | 9 |
+| Competitor extraction P / R: 1.00 / 1.00 (287 planted mentions) | evidence/06_nba_and_eval.md | 9 |
+| Genie benchmark: 9/10, median 18.5 s | evidence/08_genie.md | 9 |
 
 Also measured: Jordan Rivera FY27 Q4 35.3% attainment, 3.5× coverage, 18 open deals (gold_seller_kpis, evidence/09_app.md); 15,000 opportunities, ~456K silver rows, 0 expectation failures (evidence/02_pipeline.md). Value assumptions: public list-price ranges and the talk-track value arithmetic; no engagement figures. All data synthetic; Fleetwise and competitors (RoadLynx, FleetCore, Trackwell) are fictional.
 
