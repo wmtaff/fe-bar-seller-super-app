@@ -23,9 +23,12 @@ def _row_counts(spark, catalog: str, schemas: list[str]) -> dict:
     tables = spark.sql(f"""
         SELECT table_schema, table_name, table_type FROM `{catalog}`.information_schema.tables
         WHERE table_schema IN ({", ".join(f"'{s}'" for s in schemas)})
-          -- skip pipeline-internal tables (materializations, synced-table staging, event logs)
-          AND NOT startswith(table_name, '__') AND NOT startswith(table_name, 'event_log_')
         ORDER BY table_schema, table_name""").collect()
+    # Skip pipeline-internal tables (materializations, synced-table staging, event logs). Filtered
+    # in Python: the SQL startswith() filter matched nothing on serverless job compute.
+    tables = [t for t in tables if not t.table_name.startswith(("__", "event_log_"))]
+    if not tables:
+        raise RuntimeError(f"no tables found in {catalog}.{schemas}: refusing to write empty evidence")
     out = {}
     for t in tables:
         fq = f"`{catalog}`.`{t.table_schema}`.`{t.table_name}`"
