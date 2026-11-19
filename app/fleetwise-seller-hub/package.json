@@ -23,7 +23,7 @@
     "sync": "appkit plugin sync --write --silent",
     "typegen": "appkit generate-types",
     "setup": "appkit setup --write",
-    "test:smoke": "playwright test"
+    "test:smoke": "npx -y @playwright/test@1.56.1 test"
   },
   "keywords": [],
   "author": "",
@@ -50,7 +50,6 @@
     "@ast-grep/napi": "0.37.0",
     "@eslint/compat": "2.0.0",
     "@eslint/js": "9.39.1",
-    "@playwright/test": "^1.56.1",
     "@tailwindcss/postcss": "4.1.17",
     "@tailwindcss/vite": "4.1.17",
     "@types/express": "5.0.5",
