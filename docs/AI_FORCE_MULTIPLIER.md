@@ -64,6 +64,9 @@ owned the problem, the decisions and the approvals; the AI did most of the typin
 - Materialized views can't sync as TRIGGERED to Lakebase, so four MV-backed synced tables use SNAPSHOT (R21).
 - The write-back path became **Lakehouse Sync** (Postgres CDC into UC), measured at a 59.1 s round trip.
 - An Apps build failed on an npm mirror 404 for a dev dependency; the controller fixed the package manifest.
+- The final full test run caught the job's `CREATE OR REPLACE VIEW` silently dropping the app service
+  principal's view grants on every run; the DDL now uses `ALTER VIEW` (a static test guards it), and the
+  re-grant waits for the human's approval because the agent isn't allowed to grant on its own.
 
 ## Patterns that made it work
 
