@@ -71,10 +71,21 @@ export const str = (v: unknown): string =>
 
 export const dateTime = (v: unknown) => (v ? new Date(str(v)).toLocaleString() : '–');
 
+/** One insight list entry: plain string, or {action, owner?, due?} for next steps. */
+function listItem(x: unknown): string {
+  if (typeof x === 'string') return x;
+  if (x && typeof x === 'object') {
+    const o = x as Record<string, unknown>;
+    const main = str(o.action ?? o.item ?? o.name ?? o.text);
+    if (main) return [main, o.owner ? `(${str(o.owner)})` : '', o.due ? `due ${str(o.due)}` : ''].filter(Boolean).join(' ');
+  }
+  return JSON.stringify(x);
+}
+
 /** Insight fields are JSON arrays serialized as strings; fall back to plain text. */
 export function asList(v: unknown): string[] {
   if (v === null || v === undefined || v === '') return [];
-  if (Array.isArray(v)) return v.map((x) => (typeof x === 'string' ? x : JSON.stringify(x)));
+  if (Array.isArray(v)) return v.map(listItem);
   if (typeof v === 'string') {
     try {
       const parsed: unknown = JSON.parse(v);
