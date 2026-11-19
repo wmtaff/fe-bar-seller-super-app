@@ -1,0 +1,878 @@
+{
+  "collected_at": "2026-11-19T03:15:41+00:00",
+  "run_id": 332116180585729,
+  "job_params": "mode=increment batch=2",
+  "tasks": [
+    {
+      "task_key": "generate_data",
+      "life_cycle_state": "TERMINATED",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:09:59.804000+00:00",
+      "duration_s": 24.9
+    },
+    {
+      "task_key": "governance_setup",
+      "life_cycle_state": "TERMINATED",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:10:25.122000+00:00",
+      "duration_s": 6.2
+    },
+    {
+      "task_key": "governance_masks",
+      "life_cycle_state": "TERMINATED",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:10:31.556000+00:00",
+      "duration_s": 4.8
+    },
+    {
+      "task_key": "pipeline_refresh",
+      "life_cycle_state": "TERMINATED",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:10:36.645000+00:00",
+      "duration_s": 82.7
+    },
+    {
+      "task_key": "apply_governance",
+      "life_cycle_state": "TERMINATED",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:11:59.596000+00:00",
+      "duration_s": 13.7
+    },
+    {
+      "task_key": "governance_comments_tags",
+      "life_cycle_state": "TERMINATED",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:12:13.489000+00:00",
+      "duration_s": 9.9
+    },
+    {
+      "task_key": "ai_call_insights",
+      "life_cycle_state": "TERMINATED",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:12:23.675000+00:00",
+      "duration_s": 9.2
+    },
+    {
+      "task_key": "ai_scoring",
+      "life_cycle_state": "TERMINATED",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:12:33.061000+00:00",
+      "duration_s": 26.8
+    },
+    {
+      "task_key": "writeback_merge",
+      "life_cycle_state": "TERMINATED",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:13:00.270000+00:00",
+      "duration_s": 15.0
+    },
+    {
+      "task_key": "next_best_actions",
+      "life_cycle_state": "TERMINATED",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:13:15.546000+00:00",
+      "duration_s": 15.5
+    },
+    {
+      "task_key": "check_run_eval",
+      "life_cycle_state": "TERMINATED",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:13:31.247000+00:00",
+      "duration_s": 1.2
+    },
+    {
+      "task_key": "governance_ai_views",
+      "life_cycle_state": "TERMINATED",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:13:31.327000+00:00",
+      "duration_s": 5.6
+    },
+    {
+      "task_key": "lakebase_sync",
+      "life_cycle_state": "TERMINATED",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:13:31.404000+00:00",
+      "duration_s": 123.8
+    },
+    {
+      "task_key": "evaluate_scores",
+      "life_cycle_state": "SKIPPED",
+      "result_state": "EXCLUDED",
+      "start": "2026-11-19T03:13:32.728000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "task_key": "collect_evidence",
+      "life_cycle_state": "RUNNING",
+      "result_state": null,
+      "start": "2026-11-19T03:15:35.552000+00:00",
+      "duration_s": null
+    }
+  ],
+  "manifests": [
+    {
+      "batch": 0,
+      "mode": "init",
+      "landed_at": "2026-11-18T17:37:10Z",
+      "data_timestamp": "2026-11-16T12:00:00.000Z"
+    },
+    {
+      "batch": 1,
+      "mode": "increment",
+      "landed_at": "2026-11-18T17:50:58Z",
+      "data_timestamp": "2026-11-16T13:00:00.000Z"
+    },
+    {
+      "batch": 2,
+      "mode": "increment",
+      "landed_at": "2026-11-19T02:58:33Z",
+      "data_timestamp": "2026-11-16T14:00:00.000Z"
+    }
+  ],
+  "row_counts": {
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_bronze_account_1": {
+      "type": "MANAGED",
+      "rows": 5000
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_bronze_contact_1": {
+      "type": "MANAGED",
+      "rows": 20000
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_bronze_event_1": {
+      "type": "MANAGED",
+      "rows": 18928
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_bronze_lead_1": {
+      "type": "MANAGED",
+      "rows": 4100
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_bronze_meet_transcripts_1": {
+      "type": "MANAGED",
+      "rows": 680
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_bronze_opportunity_1": {
+      "type": "MANAGED",
+      "rows": 15300
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_bronze_opportunity_history_1": {
+      "type": "MANAGED",
+      "rows": 66706
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_bronze_product_usage_1": {
+      "type": "MANAGED",
+      "rows": 278208
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_bronze_support_tickets_1": {
+      "type": "MANAGED",
+      "rows": 8200
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_bronze_task_1": {
+      "type": "MANAGED",
+      "rows": 43021
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_bronze_user_1": {
+      "type": "MANAGED",
+      "rows": 668
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_bronze_user_role_1": {
+      "type": "MANAGED",
+      "rows": 24
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_gold_account_360_1": {
+      "type": "MANAGED",
+      "rows": 5000
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_gold_contacts_masked_1": {
+      "type": "MANAGED",
+      "rows": 20000
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_gold_opportunity_pipeline_1": {
+      "type": "MANAGED",
+      "rows": 15000
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_gold_seller_kpis_1": {
+      "type": "MANAGED",
+      "rows": 6600
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_gold_user_hierarchy_1": {
+      "type": "MANAGED",
+      "rows": 668
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_silver_accounts_1": {
+      "type": "MANAGED",
+      "rows": 5000
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_silver_activities_1": {
+      "type": "MANAGED",
+      "rows": 61949
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_silver_contacts_1": {
+      "type": "MANAGED",
+      "rows": 20000
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_silver_leads_1": {
+      "type": "MANAGED",
+      "rows": 4100
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_silver_opportunities_1": {
+      "type": "MANAGED",
+      "rows": 15000
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_silver_opportunity_history_1": {
+      "type": "MANAGED",
+      "rows": 66706
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_silver_tickets_1": {
+      "type": "MANAGED",
+      "rows": 8200
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_silver_transcripts_1": {
+      "type": "MANAGED",
+      "rows": 680
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_silver_usage_daily_1": {
+      "type": "MANAGED",
+      "rows": 278208
+    },
+    "seller_superapp.__materialization_mat_256cf7ee_6a09_4ae7_ae80_f7492987f221_silver_users_1": {
+      "type": "MANAGED",
+      "rows": 668
+    },
+    "seller_superapp.bronze_account": {
+      "type": "STREAMING_TABLE",
+      "rows": 5000
+    },
+    "seller_superapp.bronze_contact": {
+      "type": "STREAMING_TABLE",
+      "rows": 20000
+    },
+    "seller_superapp.bronze_event": {
+      "type": "STREAMING_TABLE",
+      "rows": 18928
+    },
+    "seller_superapp.bronze_lead": {
+      "type": "STREAMING_TABLE",
+      "rows": 4100
+    },
+    "seller_superapp.bronze_meet_transcripts": {
+      "type": "STREAMING_TABLE",
+      "rows": 680
+    },
+    "seller_superapp.bronze_opportunity": {
+      "type": "STREAMING_TABLE",
+      "rows": 15300
+    },
+    "seller_superapp.bronze_opportunity_history": {
+      "type": "STREAMING_TABLE",
+      "rows": 66706
+    },
+    "seller_superapp.bronze_product_usage": {
+      "type": "STREAMING_TABLE",
+      "rows": 278208
+    },
+    "seller_superapp.bronze_support_tickets": {
+      "type": "STREAMING_TABLE",
+      "rows": 8200
+    },
+    "seller_superapp.bronze_task": {
+      "type": "STREAMING_TABLE",
+      "rows": 43021
+    },
+    "seller_superapp.bronze_user": {
+      "type": "STREAMING_TABLE",
+      "rows": 668
+    },
+    "seller_superapp.bronze_user_role": {
+      "type": "STREAMING_TABLE",
+      "rows": 24
+    },
+    "seller_superapp.demo_identity_map": {
+      "type": "MANAGED",
+      "rows": 1
+    },
+    "seller_superapp.event_log_256cf7ee_6a09_4ae7_ae80_f7492987f221": {
+      "type": "MANAGED",
+      "rows": 9034
+    },
+    "seller_superapp.gold_account_360": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 5000
+    },
+    "seller_superapp.gold_call_insights": {
+      "type": "MANAGED",
+      "rows": 680
+    },
+    "seller_superapp.gold_contacts_masked": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 20000
+    },
+    "seller_superapp.gold_deal_scores": {
+      "type": "MANAGED",
+      "rows": 2955
+    },
+    "seller_superapp.gold_lead_scores": {
+      "type": "MANAGED",
+      "rows": 2616
+    },
+    "seller_superapp.gold_nba_feedback": {
+      "type": "MANAGED",
+      "rows": 9
+    },
+    "seller_superapp.gold_next_best_actions": {
+      "type": "MANAGED",
+      "rows": 4021
+    },
+    "seller_superapp.gold_opportunity_app": {
+      "type": "MANAGED",
+      "rows": 15000
+    },
+    "seller_superapp.gold_opportunity_pipeline": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 15000
+    },
+    "seller_superapp.gold_score_eval": {
+      "type": "MANAGED",
+      "rows": 94
+    },
+    "seller_superapp.gold_seller_kpis": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 6600
+    },
+    "seller_superapp.gold_user_hierarchy": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 668
+    },
+    "seller_superapp.lb_email_drafts_history": {
+      "type": "MANAGED",
+      "rows": 0
+    },
+    "seller_superapp.lb_notes_history": {
+      "type": "MANAGED",
+      "rows": 1
+    },
+    "seller_superapp.lb_seller_actions_history": {
+      "type": "MANAGED",
+      "rows": 5
+    },
+    "seller_superapp.silver_accounts": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 5000
+    },
+    "seller_superapp.silver_activities": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 61949
+    },
+    "seller_superapp.silver_contacts": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 20000
+    },
+    "seller_superapp.silver_leads": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 4100
+    },
+    "seller_superapp.silver_opportunities": {
+      "type": "STREAMING_TABLE",
+      "rows": 15000
+    },
+    "seller_superapp.silver_opportunity_history": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 66706
+    },
+    "seller_superapp.silver_seller_actions": {
+      "type": "MANAGED",
+      "rows": 3
+    },
+    "seller_superapp.silver_tickets": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 8200
+    },
+    "seller_superapp.silver_transcripts": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 680
+    },
+    "seller_superapp.silver_usage_daily": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 278208
+    },
+    "seller_superapp.silver_users": {
+      "type": "MATERIALIZED_VIEW",
+      "rows": 668
+    },
+    "seller_superapp.v_account_360": {
+      "type": "VIEW",
+      "rows": 20
+    },
+    "seller_superapp.v_call_insights": {
+      "type": "VIEW",
+      "rows": 20
+    },
+    "seller_superapp.v_deal_scores": {
+      "type": "VIEW",
+      "rows": 25
+    },
+    "seller_superapp.v_next_best_actions": {
+      "type": "VIEW",
+      "rows": 59
+    },
+    "seller_superapp.v_opportunity_pipeline": {
+      "type": "VIEW",
+      "rows": 44
+    },
+    "seller_superapp.v_seller_kpis": {
+      "type": "VIEW",
+      "rows": 11
+    },
+    "serving.__d68200b3_4776_4159_b942_cf2c928f01ee_databricks_postgres_serving_call_insights_fb49e9c0_d181_44ac_9bbb_617aff6a090a": {
+      "type": "MANAGED",
+      "rows": null,
+      "error": "[DELTA_READ_TABLE_WITHOUT_COLUMNS] You are trying to read a Delta table `serverless_stable_s1omq8_catalog`.`serving`.`__d68200b3_4776_4159_b942_cf2c928f01ee_databricks_postgres_serving_call_insights_f"
+    },
+    "serving.__d68200b3_4776_4159_b942_cf2c928f01ee_databricks_postgres_serving_lead_scores_6069c1d4_1bb7_45ff_9552_60a7f20bc47f": {
+      "type": "MANAGED",
+      "rows": null,
+      "error": "[DELTA_READ_TABLE_WITHOUT_COLUMNS] You are trying to read a Delta table `serverless_stable_s1omq8_catalog`.`serving`.`__d68200b3_4776_4159_b942_cf2c928f01ee_databricks_postgres_serving_lead_scores_606"
+    },
+    "serving.__d68200b3_4776_4159_b942_cf2c928f01ee_databricks_postgres_serving_next_best_actions_e940844b_d06a_4685_97c6_60afb6d4a286": {
+      "type": "MANAGED",
+      "rows": null,
+      "error": "[DELTA_READ_TABLE_WITHOUT_COLUMNS] You are trying to read a Delta table `serverless_stable_s1omq8_catalog`.`serving`.`__d68200b3_4776_4159_b942_cf2c928f01ee_databricks_postgres_serving_next_best_actio"
+    },
+    "serving.__d68200b3_4776_4159_b942_cf2c928f01ee_databricks_postgres_serving_opportunity_pipeline_9e1d1e7a_e7cb_47eb_b512_358077589af2": {
+      "type": "MANAGED",
+      "rows": null,
+      "error": "[DELTA_READ_TABLE_WITHOUT_COLUMNS] You are trying to read a Delta table `serverless_stable_s1omq8_catalog`.`serving`.`__d68200b3_4776_4159_b942_cf2c928f01ee_databricks_postgres_serving_opportunity_pip"
+    },
+    "serving.account_360": {
+      "type": "FOREIGN",
+      "rows": 5000
+    },
+    "serving.call_insights": {
+      "type": "FOREIGN",
+      "rows": 680
+    },
+    "serving.contacts": {
+      "type": "FOREIGN",
+      "rows": 20000
+    },
+    "serving.event_log_52ac56b2_48b4_4b2c_96d3_020a4b99a06c": {
+      "type": "MANAGED",
+      "rows": 180
+    },
+    "serving.event_log_d68200b3_4776_4159_b942_cf2c928f01ee": {
+      "type": "MANAGED",
+      "rows": 344
+    },
+    "serving.lead_scores": {
+      "type": "FOREIGN",
+      "rows": 2616
+    },
+    "serving.next_best_actions": {
+      "type": "FOREIGN",
+      "rows": 4021
+    },
+    "serving.opportunity_pipeline": {
+      "type": "FOREIGN",
+      "rows": 15000
+    },
+    "serving.seller_kpis": {
+      "type": "FOREIGN",
+      "rows": 6600
+    },
+    "serving.user_hierarchy": {
+      "type": "FOREIGN",
+      "rows": 668
+    }
+  },
+  "lineage": [
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.bronze_account",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_accounts",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.bronze_contact",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_contacts",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.bronze_event",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_activities",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.bronze_lead",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_leads",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.bronze_meet_transcripts",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_transcripts",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.bronze_opportunity",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_opportunities",
+      "target_type": "STREAMING_TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.bronze_opportunity_history",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_opportunity_history",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.bronze_product_usage",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_usage_daily",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.bronze_support_tickets",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_tickets",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.bronze_task",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_activities",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.bronze_user",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_users",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.bronze_user_role",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_users",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_account_360",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_next_best_actions",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_account_360",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.v_account_360",
+      "target_type": "VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_account_360",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.serving.account_360",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_call_insights",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_next_best_actions",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_call_insights",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.tmp_call_insights_batch",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_call_insights",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.v_call_insights",
+      "target_type": "VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_call_insights",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.serving.call_insights",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_contacts_masked",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.serving.contacts",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_deal_scores",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_next_best_actions",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_deal_scores",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_app",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_deal_scores",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.v_deal_scores",
+      "target_type": "VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_lead_scores",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.serving.lead_scores",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_nba_feedback",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_next_best_actions",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_next_best_actions",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_nba_feedback",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_next_best_actions",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_seller_actions",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_next_best_actions",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.tmp_t7_nba_snapshot",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_next_best_actions",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.v_next_best_actions",
+      "target_type": "VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_next_best_actions",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.serving.next_best_actions",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_app",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.serving.opportunity_pipeline",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_pipeline",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_account_360",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_pipeline",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_next_best_actions",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_pipeline",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_app",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_pipeline",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_seller_kpis",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_pipeline",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.tmp_call_insights_batch",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_pipeline",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.v_call_insights",
+      "target_type": "VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_pipeline",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.v_deal_scores",
+      "target_type": "VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_pipeline",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.v_opportunity_pipeline",
+      "target_type": "VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_seller_kpis",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.v_seller_kpis",
+      "target_type": "VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_seller_kpis",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.serving.seller_kpis",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_user_hierarchy",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.demo_identity_map",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_user_hierarchy",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_pipeline",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_user_hierarchy",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_seller_kpis",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.gold_user_hierarchy",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.serving.user_hierarchy",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.lb_seller_actions_history",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.silver_seller_actions",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_accounts",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_account_360",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_accounts",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_contacts_masked",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_accounts",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_pipeline",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_activities",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_account_360",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_activities",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_pipeline",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_contacts",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_contacts_masked",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_opportunities",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_account_360",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_opportunities",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_pipeline",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_opportunities",
+      "source_type": "STREAMING_TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_seller_kpis",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_opportunity_history",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_opportunity_pipeline",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_seller_actions",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_nba_feedback",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_seller_actions",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_next_best_actions",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_tickets",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_account_360",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_tickets",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_next_best_actions",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_transcripts",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.tmp_call_insights_batch",
+      "target_type": "TABLE"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_usage_daily",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_account_360",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_users",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_account_360",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.silver_users",
+      "source_type": "MATERIALIZED_VIEW",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_user_hierarchy",
+      "target_type": "MATERIALIZED_VIEW"
+    },
+    {
+      "source": "serverless_stable_s1omq8_catalog.seller_superapp.tmp_call_insights_batch",
+      "source_type": "TABLE",
+      "target": "serverless_stable_s1omq8_catalog.seller_superapp.gold_call_insights",
+      "target_type": "TABLE"
+    }
+  ]
+}

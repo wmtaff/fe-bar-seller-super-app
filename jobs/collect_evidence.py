@@ -3,8 +3,8 @@
 Params: --catalog --schema --serving-schema --volume --run-id {{job.run_id}} [--job-id ...]
 
 Writes /Volumes/<catalog>/<schema>/<volume>/evidence/run_<run_id>/evidence.json with:
-  - row_counts: COUNT(*) for every table/view in <schema> and <serving_schema> (errors recorded,
-    e.g. a synced table that UC cannot scan)
+  - row_counts: COUNT(*) for every table/view in <schema> and <serving_schema> (pipeline-internal
+    `__*` / `event_log_*` tables skipped; errors recorded and the run continues)
   - lineage: distinct source -> target edges from system.access.table_lineage touching the schemas
   - tasks: per-task state and duration for this run (earlier tasks are finished by now)
   - manifests: the generator's _manifest/batch=*.json files (landed_at = freshness t0)
@@ -23,6 +23,8 @@ def _row_counts(spark, catalog: str, schemas: list[str]) -> dict:
     tables = spark.sql(f"""
         SELECT table_schema, table_name, table_type FROM `{catalog}`.information_schema.tables
         WHERE table_schema IN ({", ".join(f"'{s}'" for s in schemas)})
+          -- skip pipeline-internal tables (materializations, synced-table staging, event logs)
+          AND NOT startswith(table_name, '__') AND NOT startswith(table_name, 'event_log_')
         ORDER BY table_schema, table_name""").collect()
     out = {}
     for t in tables:

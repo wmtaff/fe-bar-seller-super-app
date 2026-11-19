@@ -1,0 +1,133 @@
+{
+  "run_id": 1090213724348307,
+  "job_id": 94481485733041,
+  "result_state": "SUCCESS",
+  "run_page_url": "https://fevm-serverless-stable-s1omq8.cloud.databricks.com/?o=7474646802937769#job/94481485733041/run/1090213724348307",
+  "run_start": "2026-11-19T02:58:04.621000+00:00",
+  "run_end": "2026-11-19T03:09:28.509000+00:00",
+  "before": {
+    "freshness_ts": "2026-11-16T13:00:00.000Z",
+    "stage": "Demo"
+  },
+  "manifest": {
+    "batch": 2,
+    "landed_at": "2026-11-19T02:58:33Z",
+    "data_timestamp": "2026-11-16T14:00:00.000Z"
+  },
+  "probe_opp": "0060g000000038lAAA",
+  "expect_stage": "Proposal",
+  "t0_landed_at": "2026-11-19T02:58:33+00:00",
+  "t1_app_visible": "2026-11-19T03:07:33.603438+00:00",
+  "freshness_s": 540.6,
+  "after": {
+    "freshness_ts": "2026-11-16T14:00:00.000Z",
+    "stage": "Proposal"
+  },
+  "tasks": [
+    {
+      "task_key": "generate_data",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T02:58:04.661000+00:00",
+      "end": "2026-11-19T02:58:40.858000+00:00",
+      "duration_s": 36.2
+    },
+    {
+      "task_key": "governance_setup",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T02:58:41.297000+00:00",
+      "end": "2026-11-19T02:58:47.736000+00:00",
+      "duration_s": 6.4
+    },
+    {
+      "task_key": "governance_masks",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T02:58:47.993000+00:00",
+      "end": "2026-11-19T02:58:52.325000+00:00",
+      "duration_s": 4.3
+    },
+    {
+      "task_key": "pipeline_refresh",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T02:58:52.602000+00:00",
+      "end": "2026-11-19T03:00:56.257000+00:00",
+      "duration_s": 123.7
+    },
+    {
+      "task_key": "apply_governance",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:00:56.548000+00:00",
+      "end": "2026-11-19T03:01:10.330000+00:00",
+      "duration_s": 13.8
+    },
+    {
+      "task_key": "governance_comments_tags",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:01:10.587000+00:00",
+      "end": "2026-11-19T03:01:21.170000+00:00",
+      "duration_s": 10.6
+    },
+    {
+      "task_key": "ai_call_insights",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:01:21.435000+00:00",
+      "end": "2026-11-19T03:03:30.543000+00:00",
+      "duration_s": 129.1
+    },
+    {
+      "task_key": "ai_scoring",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:03:30.787000+00:00",
+      "end": "2026-11-19T03:05:04.235000+00:00",
+      "duration_s": 93.4
+    },
+    {
+      "task_key": "writeback_merge",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:05:04.603000+00:00",
+      "end": "2026-11-19T03:05:23.169000+00:00",
+      "duration_s": 18.6
+    },
+    {
+      "task_key": "next_best_actions",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:05:23.410000+00:00",
+      "end": "2026-11-19T03:05:40.055000+00:00",
+      "duration_s": 16.6
+    },
+    {
+      "task_key": "check_run_eval",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:05:40.299000+00:00",
+      "end": "2026-11-19T03:05:41.375000+00:00",
+      "duration_s": 1.1
+    },
+    {
+      "task_key": "governance_ai_views",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:05:40.376000+00:00",
+      "end": "2026-11-19T03:05:46.045000+00:00",
+      "duration_s": 5.7
+    },
+    {
+      "task_key": "lakebase_sync",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:05:40.456000+00:00",
+      "end": "2026-11-19T03:07:47.957000+00:00",
+      "duration_s": 127.5
+    },
+    {
+      "task_key": "evaluate_scores",
+      "result_state": "EXCLUDED",
+      "start": "2026-11-19T03:05:41.605000+00:00",
+      "end": "2026-11-19T03:05:41.605000+00:00",
+      "duration_s": 0.0
+    },
+    {
+      "task_key": "collect_evidence",
+      "result_state": "SUCCESS",
+      "start": "2026-11-19T03:07:48.342000+00:00",
+      "end": "2026-11-19T03:09:27.978000+00:00",
+      "duration_s": 99.6
+    }
+  ]
+}
