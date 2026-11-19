@@ -6,6 +6,9 @@
 -- evidence queries use the views.
 -- Parameters: :catalog, :schema.
 
+-- Views: CREATE VIEW IF NOT EXISTS + ALTER VIEW ... AS, not CREATE OR REPLACE VIEW, because
+-- CREATE OR REPLACE VIEW drops the privileges granted on the view (it removed the app SP's
+-- SELECT from grants.sql on every job run; found in Task 11). ALTER keeps the object and its grants.
 USE CATALOG IDENTIFIER(:catalog);
 USE SCHEMA IDENTIFIER(:schema);
 
@@ -51,17 +54,20 @@ RETURN CASE
   ELSE coalesce(fn_can_see_owner_for(fn_current_persona().persona_user_id, fn_can_see_owner.owner_id), FALSE)
 END;
 
-CREATE OR REPLACE VIEW v_opportunity_pipeline
+CREATE VIEW IF NOT EXISTS v_opportunity_pipeline
 COMMENT 'Governed dynamic view of gold_opportunity_pipeline: one row per opportunity, row-filtered by fn_can_see_owner(owner_id) so a seller sees their own deals and a manager/RVP their team''s. Use this (not the gold table) for Genie and ad-hoc analysis.'
 AS SELECT * FROM gold_opportunity_pipeline WHERE fn_can_see_owner(owner_id);
+ALTER VIEW v_opportunity_pipeline AS SELECT * FROM gold_opportunity_pipeline WHERE fn_can_see_owner(owner_id);
 
-CREATE OR REPLACE VIEW v_seller_kpis
+CREATE VIEW IF NOT EXISTS v_seller_kpis
 COMMENT 'Governed dynamic view of gold_seller_kpis: one row per seller and fiscal quarter, row-filtered by fn_can_see_owner(owner_id) (seller = own KPIs, manager/RVP = team).'
 AS SELECT * FROM gold_seller_kpis WHERE fn_can_see_owner(owner_id);
+ALTER VIEW v_seller_kpis AS SELECT * FROM gold_seller_kpis WHERE fn_can_see_owner(owner_id);
 
-CREATE OR REPLACE VIEW v_account_360
+CREATE VIEW IF NOT EXISTS v_account_360
 COMMENT 'Governed dynamic view of gold_account_360: one row per customer/prospect account, row-filtered by fn_can_see_owner(owner_id) on the account owner (seller = own accounts, manager/RVP = team''s accounts).'
 AS SELECT * FROM gold_account_360 WHERE fn_can_see_owner(owner_id);
+ALTER VIEW v_account_360 AS SELECT * FROM gold_account_360 WHERE fn_can_see_owner(owner_id);
 
 -- Seed: the user running the job acts as the seller persona (Jordan Rivera) unless they
 -- already have a valid persona (the app's persona switcher owns the row after that). A row
