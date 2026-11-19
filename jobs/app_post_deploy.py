@@ -21,6 +21,7 @@ import re
 import sys
 from pathlib import Path
 
+import psycopg
 from databricks.sdk import WorkspaceClient
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -53,13 +54,24 @@ def pg_grants(w: WorkspaceClient, branch_path: str, sp: str) -> None:
         print("PG   schema app owner:", row[0])
         cur.execute("SELECT DISTINCT tableowner FROM pg_tables WHERE schemaname = 'serving'")
         writers = [r[0] for r in cur.fetchall()]
-        stmts = [f'GRANT USAGE ON SCHEMA serving TO "{sp}"',
-                 f'GRANT SELECT ON ALL TABLES IN SCHEMA serving TO "{sp}"']
-        stmts += [f'ALTER DEFAULT PRIVILEGES FOR ROLE "{wr}" IN SCHEMA serving GRANT SELECT ON TABLES TO "{sp}"'
-                  for wr in writers]
-        for s in stmts:
+        for s in (f'GRANT USAGE ON SCHEMA serving TO "{sp}"',
+                  f'GRANT SELECT ON ALL TABLES IN SCHEMA serving TO "{sp}"'):
             cur.execute(s)
             print("PG  ", s)
+        pg.commit()  # the required grants must not be rolled back by the optional step below
+        # Optional: future synced tables are owned by the sync writer role. Changing its default
+        # privileges needs membership in that role, which the project owner may not have. If it is
+        # refused, re-run this script after any synced table is (re)created.
+        for wr in writers:
+            s = f'ALTER DEFAULT PRIVILEGES FOR ROLE "{wr}" IN SCHEMA serving GRANT SELECT ON TABLES TO "{sp}"'
+            try:
+                cur.execute(s)
+                pg.commit()
+                print("PG  ", s)
+            except psycopg.errors.InsufficientPrivilege as e:
+                pg.rollback()
+                print(f"PG   WARN skipped (no membership in {wr}): {e.diag.message_primary}; "
+                      "re-run this script after recreating a synced table")
 
 
 def main() -> None:
