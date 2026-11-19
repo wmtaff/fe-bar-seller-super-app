@@ -37,6 +37,17 @@ Mirrors a real engagement; no real customer data or names in the repo.
 - Next best actions: 4,045 ranked actions (call next steps, model next_action, 4 rules), stable `action_id`;
   a no-change re-run rewrites 0 rows, so app write-backs survive and the Lakebase sync gets no churn.
 
+- **Freshness, measured end to end** (Task 11, 2026-11-19, `evidence/10_e2e.md`): increment batch 2 landed in the
+  volume at 02:58:33Z; the app's `/api/home` and the Lakebase row showed the change at 03:07:33.6Z →
+  **t1 − t0 = 540.6 s ≈ 9.0 min** (today: ~2-hour batch). Biggest segments: pipeline 124 s, `ai_query` on new calls
+  129 s, OpenJev scoring 93 s, Lakebase sync 115 s. Rerun of the same batch: identical row counts in all tables.
+- **Run cost, measured (estimate)** (`docs/VALUE_MODEL.md`): ~1.65 DBU ≈ $1.15 per incremental run (pipeline, job
+  tasks, SQL warehouse, sync pipelines; $0.70/DBU assumed) → ~$10K/yr at an hourly cadence, plus Lakebase
+  (~0.12 CU-h per run, 1 CU scale-to-zero) and AI tokens proportional to new calls. Far under the $150–250K/yr
+  planning assumption, which stays in the payback math for full call volume, app/Genie and non-prod.
+- Lineage in UC system tables connects `bronze_opportunity → silver → gold_opportunity_pipeline →
+  gold_opportunity_app → serving.opportunity_pipeline` (the Lakebase synced table).
+
 ## Objections to prep (collect as we go)
 - Biz: cost vs CRMA seats; risk of a homegrown app; time to value.
 - Tech: Salesforce data freshness; row-level security parity with SFDC sharing; write-back consistency; AI accuracy.
