@@ -178,7 +178,8 @@ def test_rerun_no_duplicates(ws, base):
     runs.sort(key=lambda e: e["collected_at"])
     by_params = defaultdict(list)
     for ev in runs:
-        if ev["job_params"].startswith("mode=increment"):
+        # An empty snapshot is invalid evidence (collect_evidence now refuses to write one).
+        if ev["job_params"].startswith("mode=increment") and ev["row_counts"]:
             by_params[ev["job_params"]].append(ev)
     pairs = [v[-2:] for v in by_params.values() if len(v) >= 2]
     if not pairs:
