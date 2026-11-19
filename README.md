@@ -19,14 +19,14 @@ from Lakebase, with a Genie copilot for any follow-up question.
 
 What the build proves (measured, all text evidence in [`evidence/`](evidence/)):
 
-- **Freshness:** a new CRM export file is visible in the seller app **9.0 minutes** after it lands
+- **Freshness:** a new CRM export file is visible to the app (the Lakebase row it reads) **9.0 minutes** after it lands
   (today: ~2-hour batch refresh), measured end to end through every layer ([`evidence/10_e2e.md`](evidence/10_e2e.md)).
 - **AI you can measure:** OpenJev deal scores reach **AUC 0.695** on 400 held-out closed deals, with
   **top-decile lift 2.06×** (80% win rate vs 39% base) ([`evidence/06`](evidence/06_nba_and_eval.md)).
   An earlier run scored 0.697 because a post-close CRM field leaked into the "as-of" snapshot; the
   reviewer caught it and 0.695 is the clean number. Call-insight competitor extraction: precision/recall
-  1.00/1.00 against planted mentions ([`evidence/04`](evidence/04_call_insights.md)).
-- **Operational serving:** Lakebase adds **6.3 ms** p95 over network for a deal lookup (0.07 ms server-side)
+  1.00/1.00 against 287 planted mentions ([`evidence/06`](evidence/06_nba_and_eval.md)).
+- **Operational serving:** Lakebase adds **6.3 ms** over the network baseline for a deal lookup (0.07 ms server-side)
   ([`evidence/07`](evidence/07_lakebase.md)); a seller's click in the app lands back in Delta in a **59.1 s**
   round trip (CDC 16.2 s) through Lakehouse Sync.
 - **Natural language:** the Genie agent answers **9/10** benchmark seller questions correctly, row-scoped to
@@ -91,7 +91,7 @@ flowchart LR
   APP --> APPDB -- "Lakehouse Sync (CDC)" --> WB["silver_seller_actions<br/>gold_nba_feedback"] --> NBA
 ```
 
-One daily Lakeflow job (`seller_superapp_daily`, [`resources/seller_superapp_daily.job.yml`](resources/seller_superapp_daily.job.yml))
+One daily-cadence Lakeflow job (triggered manually for the demo; `seller_superapp_daily`, [`resources/seller_superapp_daily.job.yml`](resources/seller_superapp_daily.job.yml))
 runs it all: `generate_data → governance_setup → governance_masks → pipeline_refresh → apply_governance →
 governance_comments_tags → ai_call_insights → ai_scoring → writeback_merge → next_best_actions →
 lakebase_sync / governance_ai_views / (evaluate_scores if run_eval) → collect_evidence`. Every step is
@@ -131,7 +131,7 @@ serving.opportunity_pipeline`, with `gold_deal_scores → gold_opportunity_app` 
 | Lakebase for app reads and writes; synced tables from gold | Millisecond lookups + OLTP writes without custom ETL | Four pipeline MVs sync as **SNAPSHOT** (TRIGGERED isn't supported on MVs): small tables, full resync each run |
 | **Write-back via Lakehouse Sync** (Postgres CDC → UC history table → MERGE) | Managed CDC, governed lineage, measured **59.1 s** round trip | The planned federated Lakebase catalog needed CREATE CATALOG (not granted); kept as an optional fallback in `writeback.sql` |
 | Row filters on dynamic views, base gold unfiltered | Row-filtered tables can't be synced-table sources, and synced tables don't carry UC FGAC | The app scopes Postgres queries by the same hierarchy; Postgres RLS is the production hardening step |
-| Mask-only PII (no unmasked group); grants to the app SP only | Simplest safe default; nothing shared with broad groups | Unmasked access exists only via `fn_mask_pii_for` in tests/evidence |
+| Mask-only PII (an unmasked group `superapp_revops` is referenced by the mask but intentionally not created: mask-only by design); grants to the app SP only | Simplest safe default; nothing shared with broad groups | Unmasked access exists only via `fn_mask_pii_for` in tests/evidence |
 | Persona switcher (seller / manager) via `demo_identity_map` | One developer identity must demo several sellers | Demo impersonation, not entitlement; validated endpoint, never "admin" |
 | Bundle-managed everything, no `mode: development` | Exact object names for the demo | Schedules aren't auto-paused in dev (no schedules are used) |
 | Out of scope | Lakehouse RT, Team/manager view, email drafting | Cut for time; listed in [`docs/BACKLOG.md`](docs/BACKLOG.md) |
@@ -208,6 +208,6 @@ its service principal plus on-behalf-of-user auth for Genie.
 | [`evidence/08_genie.md`](evidence/08_genie.md) | Genie answers 9/10 seller questions, row-scoped to the persona |
 | [`evidence/09_app.md`](evidence/09_app.md) | The app is RUNNING; SP grants, second-principal denial, API captures, Genie via OBO, 59.1 s write-back round trip |
 | [`evidence/10_e2e.md`](evidence/10_e2e.md) | The full job runs end to end on an increment; lineage connects bronze to the Lakebase table; 9.0-minute freshness; rerun parity |
-| [`evidence/11_tests.md`](evidence/11_tests.md) | Full suite: 184 of 185 pass; the 1 failure found a real bug (job view DDL dropped the app SP's view grants), fixed in code; the re-grant awaits user approval |
+| [`evidence/11_tests.md`](evidence/11_tests.md) | Full suite: 184 passed, 1 failed, 1 skipped (9 opt-in `governance_mutating` tests deselected); the 1 failure found a real bug (job view DDL dropped the app SP's view grants), fixed in code; the re-grant awaits user approval |
 | [`evidence/runs/`](evidence/runs/) | Raw JSON from `collect_evidence` (row counts, lineage edges, task timing) and the freshness measurement |
 | [`notebooks/01_walkthrough.ipynb`](notebooks/01_walkthrough.ipynb) | One deal followed through every layer, with executed text outputs (run with `nbconvert --execute` as a client of the workspace: serverless SQL warehouse, Lakebase, Genie API, app API) |

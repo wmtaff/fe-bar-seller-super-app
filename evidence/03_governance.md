@@ -19,7 +19,7 @@ Collected 2026-11-18 on the Demo Warehouse, catalog `serverless_stable_s1omq8_ca
 
 **Admin bypass (design choice).** If the caller has a persona, it decides: `admin` sees everything, anything else is scoped. If the caller has no row, account-group admins (`is_account_group_member('admins')`) see everything and everyone else sees nothing. So a presenter who is an admin can still demonstrate scoping, and an unmapped user is denied by default. (The executing user is a workspace admin, `is_member('admins')`, but not in the account group `admins`; see section 1.)
 
-**Masking design.** Everyone sees masked contacts and leads (`f***@domain`, `***-***-1234`). In production, a RevOps account group (`superapp_revops`, referenced by `fn_mask_pii`) can be granted unmasked access. The unmasked branch is proven through `fn_mask_pii_for(v, true)`, which `fn_mask_pii` wraps (section 4).
+**Masking design.** Everyone sees masked contacts and leads (`f***@domain`, `***-***-1234`). In production, a RevOps account group (`superapp_revops`, referenced by `fn_mask_pii`) can be granted unmasked access. The unmasked branch is proven through `fn_mask_pii_for(v, true)`, which `fn_mask_pii` uses the same logic as (inlined; section 4).
 
 **PII tag key.** This shared workspace has an account-level governed tag `pii` whose allowed values are only `ssn` and `address`, so `pii = true` fails with `UC_TAG_POLICY_VALUE_NOT_ALLOWED`. The columns carry the governed boolean tag `contains_pii = true` instead, plus Databricks' system data-classification tags.
 
@@ -282,7 +282,7 @@ SELECT count(*) AS contacts, sum(CASE WHEN email RLIKE '^.[*]{3}@[^@]+$' THEN 1 
 |---|---|---|
 | 20000 | 20000 | 20000 |
 
-Unmasked path: by design everyone sees masked contacts; in production a RevOps account group (`superapp_revops`) can be granted unmasked access. The unmasked branch is proven through the mask core `fn_mask_pii_for(v, true)` that `fn_mask_pii` wraps:
+Unmasked path: by design everyone sees masked contacts; in production a RevOps account group (`superapp_revops`) can be granted unmasked access. The unmasked branch is proven through the mask core `fn_mask_pii_for(v, true)` that `fn_mask_pii` uses the same logic as (inlined):
 
 ```sql
 SELECT fn_mask_pii_for('jane.doe@acme.example', true) AS revops_sees, fn_mask_pii_for('jane.doe@acme.example', false) AS others_see, fn_mask_pii_for('(415) 555-0123', true) AS revops_phone, fn_mask_pii_for('(415) 555-0123', false) AS others_phone
