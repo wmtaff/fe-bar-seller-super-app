@@ -8,7 +8,7 @@
 - **Two people are in the room.** The **business persona** is the exec who funds the decision (think CRO or VP RevOps). The **technical persona** is the architect or data platform lead. Name them in the opening and use their names all the way through.
 - **Format:** plain text is what you say, in the first person. *[Bracketed italics]* are stage directions. **Bold** is the line to land.
 - **Each demo segment has the same shape:** TELL (what you're about to show and why) → SHOW (click path and what to point at) → TELL "so what" (tied to a KPI) → a one-line exec framing → a technical deep-dive option you offer but don't force.
-- **Placeholders:** anything in `[[double brackets]]` is a measured number that doesn't exist yet. Swap them in before the roleplay, or say "we're measuring that in the pilot" and move on. The full list is at the end of this doc.
+- **Numbers:** every number below is from the committed evidence (`evidence/01`–`11`, `docs/VALUE_MODEL.md`). The full list, with sources, is at the end of this doc. AUC, lift and extraction are measured against the generator's planted truth, not real-world accuracy.
 - **Altitude rule:** answer the person who asked, at their altitude, then translate for the other in one sentence. ("For you, Dana, that means…")
 
 ## Timing at a glance
@@ -21,14 +21,14 @@
 | 7:00 | Segment 2: Deal 360 (AI insights + score) | 3.0 | Both |
 | 10:00 | Segment 3: Next-best-action write-back | 1.5 | Architect |
 | 11:30 | Segment 4: Ask Genie | 2.0 | Both |
-| 13:30 | Segment 5: Manager view | 1.5 | Exec |
+| 13:30 | Segment 5: The manager persona | 1.5 | Exec |
 | 15:00 | Segment 6: Under the hood | 2.5 | Architect |
 | 17:30 | Close: recap, pilot, asks | 2.5 | Both |
 | 20:00 | Open Q&A | 5–10 | Both |
 
 ## Pre-flight checklist (do this 15 minutes before)
 
-- App open on **My Week** as **Jordan Rivera**. A second tab has the app already switched to **Morgan Lee**, so you never wait on a persona switch live.
+- App open on **My Week** as **Jordan Rivera**. Know where the **persona switcher** is: in Segment 5 you switch to **Morgan Lee** (manager) live, and back to Jordan afterwards.
 - Genie space **Fleetwise Revenue Copilot** open in a third tab, with the sample questions visible.
 - Catalog Explorer open on `gold_opportunity_pipeline` → **Lineage** tab, in a fourth tab.
 - Run one increment of the daily job about 10 minutes before you start, so "updated N min ago" shows a small number.
@@ -50,7 +50,7 @@ Fleetwise sells fleet telematics: vehicle gateways, AI dash cams, driver safety,
 
 What I'll show you today is the **Fleetwise Seller Hub**: one app, built on Databricks, that pulls Salesforce, call transcripts, product usage and support tickets into one governed place, adds AI on top, and puts it in front of the seller in milliseconds. Everything you'll see runs on synthetic Fleetwise-shaped data. No real customer data.
 
-Here's the plan. I'll spend two minutes on the value we think this is worth to Fleetwise. Then I'll walk a seller's Monday morning, a deal deep-dive, the AI copilot, and the manager's view. I'll finish with five minutes under the hood, and a proposal for a pilot.
+Here's the plan. I'll spend two minutes on the value we think this is worth to Fleetwise. Then I'll walk a seller's Monday morning, a deal deep-dive, the AI copilot, and what a manager sees. I'll finish with five minutes under the hood, and a proposal for a pilot.
 
 *[Pause. Look at the exec first.]*
 
@@ -78,7 +78,7 @@ Before the demo, here's the business case in one breath. These are **assumptions
 
 **Lever 3: win more of the pipeline you already have.** If AI-ranked priorities and next steps move win rate by **one point** on the pipeline sellers actually work (we'll assume about $600M a year), that's **about $6 million of extra ACV**. I treat that one as upside to prove in the pilot, not something to bank today.
 
-Against that, the platform cost of running this (pipelines, AI enrichment, Lakebase, the app) is an assumption of roughly **$150K to $250K a year** at full scale, which we'll replace with the measured run cost of `[[job cost per run: evidence/job_cost.md]]` scaled up. So on seats alone, **this pays for itself several times over in year one**, before we count a single hour of seller time.
+Against that, the platform cost of running this (pipelines, AI enrichment, Lakebase, the app) is an assumption of roughly **$150K to $250K a year** at full scale, and the pilot replaces it with billed cost. At demo scale we measured about **$1.15 per incremental run** (~1.65 DBU, an estimate), roughly $10K a year if it ran hourly, so the assumption is deliberately generous. On seats alone, **payback is about 4 months** (about 9 months in the conservative case), before we count a single hour of seller time.
 
 *[To the exec:]* Does that framing match how you'd pitch it to your CFO, or would you weight it differently?
 
@@ -96,8 +96,8 @@ This is Monday morning for **Jordan Rivera**, an enterprise AE. Jordan's questio
 
 *[Share screen. App on My Week, logged in as Jordan.]*
 
-1. *[Point at the top-right.]* First, look at this: "**updated `[[freshness: evidence/freshness.md]]` min ago**." Today that's a two-hour batch.
-2. *[Point at the KPI strip.]* Jordan's quarter, FY27 Q4: quota attainment at about **`[[Jordan attainment ≈29%: evidence/02 re-run]]`**, open pipeline, commit, and at-risk ACV. Coverage is about **`[[Jordan coverage ≈3.5x: evidence/02 re-run]]`**. So Jordan has enough pipeline. The problem isn't volume. It's which deals to push.
+1. *[Point at the freshness badge, top-right.]* First, look at this: the data is fresh. We timed one increment from a new CRM file landing to the row this app reads: **9.0 minutes**. Today that's a two-hour batch.
+2. *[Point at the KPI strip.]* Jordan's quarter, FY27 Q4: quota attainment at **35.3%**, open pipeline and commit across **18 open deals**. Coverage is **3.5×**. So Jordan has enough pipeline. The problem isn't volume. It's which deals to push.
 3. *[Point at Priority deals.]* These are ranked by **ACV times the probability of closing this quarter**. Each one has a probability bar, and these chips say *why*: "competitor mentioned on last call," "usage down 18%," "no activity in 21 days."
 4. *[Point at the Next best actions queue.]* And on the right, the actions the Hub thinks Jordan should take this week, each with a one-line reason.
 5. *[Hover over a deal row. Let the page respond instantly.]* Notice how fast that is. It's reading from an operational database, not running a report.
@@ -122,7 +122,7 @@ Let's open Jordan's top deal. This is the screen that replaces the "stitch it to
 *[Click the top Priority deal. Deal 360 opens.]*
 
 1. *[Point at the header and stage timeline.]* The basics from Salesforce: stage, ACV, close date, and how long it's sat in this stage.
-2. *[Point at the AI score panel.]* Here's the AI's view. Probability of closing this quarter is **`[[example deal P(close): app screenshot → evidence/app.md]]`**, with the full distribution, not just a single number. And here's the suggested next action, with its own probability. The model returns calibrated probabilities, so we can rank by expected value instead of gut feel.
+2. *[Point at the AI score panel.]* Here's the AI's view. Probability of closing this quarter is **0.86** on this deal (Solis Construction), with the full distribution, not just a single number. And here's the suggested next action, with its own probability. The model returns calibrated probabilities, so we can rank by expected value instead of gut feel.
 3. *[Point at Latest call insights.]* This came from the Google Meet transcript. The AI pulled out the **next steps** with owners and due dates, the **open items**, the products the customer is **interested** in, and, look here, a **competitor mention**: they brought up **RoadLynx** pricing. That isn't in the CRM competitor field. It was only on the call.
 4. *[Point at the usage sparkline and adoption by product.]* This is their fleet's actual product usage. Active vehicles are trending down, and they've never turned on Driver Safety. That's whitespace and a risk signal at the same time.
 5. *[Point at the support tickets.]* There's an open high-severity ticket. You do *not* want to send a proposal into an open P1 without knowing about it.
@@ -130,7 +130,7 @@ Let's open Jordan's top deal. This is the screen that replaces the "stitch it to
 
 **TELL: so what**
 
-Before this, Jordan finds out about the RoadLynx mention and the P1 ticket in the meeting, from the customer. Now Jordan walks in knowing both. **That's the win-rate lever: better-prepared calls on the deals most likely to move.** And on accuracy, we didn't just eyeball this. We tested the score against deals whose outcome we know. On held-out closed deals it scores an AUC of **`[[AUC: evidence/score_eval.md]]`**, and the top 10% of deals it ranks close at **`[[top-decile lift: evidence/score_eval.md]]`** times the average rate.
+Before this, Jordan finds out about the RoadLynx mention and the P1 ticket in the meeting, from the customer. Now Jordan walks in knowing both. **That's the win-rate lever: better-prepared calls on the deals most likely to move.** And on accuracy, we didn't just eyeball this. We tested the score against deals whose outcome we know. On 400 held-out closed deals it scores an AUC of **0.695**, and the top 10% of deals it ranks close at **2.06×** the average rate (80% vs 39%). That's against the synthetic data's hidden ground truth, so read it as "the pipeline works", and the pilot re-measures it on your closed deals.
 
 - **Exec framing:** "Your sellers get a researched brief on every deal, and a score you can audit, not a black box."
 - **Technical deep-dive option:** "Two different AI jobs here. Reading the call is generative, using `ai_query` with Claude and a strict JSON schema, so the output lands as typed columns. The score is a classifier, OpenJev, that returns calibrated probabilities and no generated text, so it's cheap and consistent. I can walk the evaluation if you want."
@@ -148,16 +148,16 @@ An insight is only worth something if the seller acts on it, and if we learn fro
 *[Still on Deal 360, or back on My Week. Find the NBA you left unaccepted.]*
 
 1. *[Point at the action.]* The Hub suggests "Bring in an exec sponsor before proposal," because the classifier says single-threaded risk is high and the call confirms only one stakeholder.
-2. *[Click **Accept**.]* Accepted. *[Refresh or move to My Week.]* It's moved state instantly. That write went to Lakebase, the operational database, in about **`[[write round-trip ms: evidence/lakebase.md]]`**.
+2. *[Click **Accept**.]* Accepted. *[Refresh or move to My Week.]* It's moved state instantly. That write went to Lakebase, the operational database.
 3. *[Optionally dismiss a different action with a reason.]* If Jordan dismisses one, we capture why.
-4. *[To the architect:]* Every accept or dismiss flows back into the lakehouse on the next job run, so it's governed and has lineage, like everything else.
+4. *[To the architect:]* Every accept or dismiss lands in Delta in about a minute (59 s measured), so it's governed and has lineage, like everything else.
 
 **TELL: so what**
 
 That gives you something you've never had: **a measured adoption rate per action type, per rep.** Today you can't tell whether a dashboard changed what anyone did. Here, you'll know, and the ranking gets better as sellers use it.
 
 - **Exec framing:** "You get proof of adoption, not just logins."
-- **Technical deep-dive option:** "The app writes to native Postgres tables in Lakebase. The Lakebase database is registered in Unity Catalog, and a job task MERGEs those writes into Delta, into `silver_seller_actions`, then a feedback table. One copy of truth, with lineage both ways."
+- **Technical deep-dive option:** "The app writes to native Postgres tables in Lakebase. Lakehouse Sync streams those writes (CDC) into a Unity Catalog table in about a minute, and the job MERGEs them into `silver_seller_actions`, then a feedback table. One copy of truth, with lineage both ways."
 
 *Compress:* click Accept, say the exec line, move on.
 
@@ -180,36 +180,38 @@ No screen ever has every question on it. So instead of filing a request with Rev
 
 **TELL: so what**
 
-That's an ad hoc report that today takes a RevOps ticket and a few days, answered in about `[[Genie answer seconds: evidence/genie.md]]` seconds. **It reduces RevOps report backlog and it's one more tool you don't need a seat for.** On accuracy, we benchmarked it on a fixed set of questions: **`[[Genie benchmark x/N correct: evidence/genie.md]]`**.
+That's an ad hoc report that today takes a RevOps ticket and a few days, answered in about **18 seconds** (median 18.5 s on our benchmark). **It reduces RevOps report backlog and it's one more tool you don't need a seat for.** On accuracy, we benchmarked it on a fixed set of questions: **9 out of 10 correct**, and the one miss was a correct empty answer on a gap in the synthetic data.
 
 - **Exec framing:** "Every seller and manager gets an analyst who answers in plain English and shows their work."
 - **Technical deep-dive option:** "Genie is grounded with table and column comments from Unity Catalog, join definitions, our fiscal-calendar rules, and trusted example SQL. The app calls it through the Genie Conversation API with on-behalf-of-user auth."
 
 *Compress:* one question, show the SQL, make the row-filter point.
 
-## 13:30 – Segment 5: Manager view (1.5 min)
+## 13:30 – Segment 5: The manager persona (1.5 min)
 
 **TELL**
 
-Now let's switch hats. [Exec], this is the view you and your managers care about. **Morgan Lee** manages Jordan's team.
+Now let's switch hats. [Exec], this is what you and your managers care about. **Morgan Lee** manages Jordan's team, and Morgan uses the same app.
 
 **SHOW**
 
-*[Switch to the second tab, already set to Morgan Lee. Open **Team**.]*
+*[Use the persona switcher: Jordan Rivera → Morgan Lee (manager). My Week reloads.]*
 
-1. *[Point at the team roll-up.]* Attainment, pipeline and commit across every rep on Morgan's team, from the same data the sellers see. No separate forecast tool.
-2. *[Point at At-risk deals.]* At-risk deals across reps, ranked by ACV at risk, with the same "why" chips: competitor, usage drop, stale activity.
-3. *[Point at NBA adoption by rep.]* And here's what the write-back bought us: which reps are acting on recommendations, and which aren't.
+1. *[Point at the KPI strip.]* Same screen, now scoped to Morgan's team: 8 reps, 46 open deals, attainment and coverage across the team, from the same data the sellers see.
+2. *[Point at Priority deals.]* The team's deals, from every rep, ranked the same way, with the same "why" chips: competitor, usage drop, stale activity.
+3. *[Open one of another rep's deals.]* Morgan can open any deal on the team in Deal 360 and walk into the forecast call with the evidence.
 4. *[Point at the scope.]* Morgan sees the whole team. Jordan, as we saw, sees only Jordan's book. Same app, same data, scoped by role.
+
+*[Switch the persona back to Jordan.]*
 
 **TELL: so what**
 
-Your Monday forecast call goes from "tell me about your deals" to "here are the three at-risk deals, what's the plan for each." **That's forecast accuracy and manager time, and it's the forecasting seat you no longer need.**
+Your Monday forecast call goes from "tell me about your deals" to "here are the deals at risk, what's the plan for each." **That's forecast accuracy and manager time, from the same numbers your sellers see.** A dedicated team roll-up screen (adoption by rep, forecast roll-up) is on the roadmap; the write-back data for it is already flowing.
 
 - **Exec framing:** "Your managers coach from evidence, and you get a forecast built on the same numbers your sellers see."
-- **Technical deep-dive option:** "Scoping follows the hierarchy: seller → manager → RVP, from `gold_user_hierarchy`. On the lakehouse side, it's a UC row filter. In the app's Postgres reads, it's the same hierarchy applied in the query."
+- **Technical deep-dive option:** "Scoping follows the hierarchy: seller → manager → RVP, from `gold_user_hierarchy`. On the lakehouse side, it's a UC row filter. In the app's Postgres reads, it's the same hierarchy applied in the query. The persona switcher is demo impersonation for one developer identity, not an entitlement."
 
-*Compress:* show only at-risk deals and the adoption column. If the Manager view isn't built yet, say "the manager roll-up is next in the build," and show the same question in Genie as Morgan instead ("Which deals on my team are at risk this quarter?").
+*Compress:* switch persona, show the team's deals, make the scoping point, switch back.
 
 ## 15:00 – Segment 6: Under the hood (2.5 min)
 
@@ -223,10 +225,10 @@ There are six layers, and the key point is that it's **one connected journey on 
 
 *[Switch to Catalog Explorer on `gold_opportunity_pipeline` → **Lineage**.]*
 
-1. **Ingest: Lakeflow.** *[Point at the upstream nodes.]* Salesforce-shaped exports, Meet transcripts, usage and tickets land in a Unity Catalog volume. A Lakeflow Spark Declarative Pipeline picks up only new files with Auto Loader and builds bronze, silver and gold. Data-quality expectations drop bad keys and dates. In our runs, more than 440,000 silver rows went through and **zero failed an expectation** (that's in the evidence). In production, the Salesforce side switches to the **Lakeflow Connect Salesforce connector** instead of file drops.
+1. **Ingest: Lakeflow.** *[Point at the upstream nodes.]* Salesforce-shaped exports, Meet transcripts, usage and tickets land in a Unity Catalog volume. A Lakeflow Spark Declarative Pipeline picks up only new files with Auto Loader and builds bronze, silver and gold. Data-quality expectations drop bad keys and dates. In our runs, about 456,000 silver rows went through and **zero failed an expectation** (that's in the evidence). In production, the Salesforce side switches to the **Lakeflow Connect Salesforce connector** instead of file drops.
 2. **Govern: Unity Catalog.** *[Point at the columns tab, then the tags.]* Every table and column has a comment, which also teaches Genie. Contact email and phone are tagged PII with a column mask. Row filters scope sellers to their book and managers to their hierarchy.
 3. **Intelligence.** *[Point at downstream nodes `gold_call_insights` and `gold_deal_scores`.]* The AI tables are part of the same lineage graph. You can trace a score back to the transcript and the opportunity it came from.
-4. **Serve: Lakebase.** *[Point at the synced tables.]* Gold tables sync into Lakebase Postgres, so the app does millisecond point reads, `[[Lakebase p95 read ms: evidence/lakebase.md]]` at p95, instead of 90-second dashboard queries. App writes go to Postgres and MERGE back into Delta.
+4. **Serve: Lakebase.** *[Point at the synced tables.]* Gold tables sync into Lakebase Postgres, so the app does millisecond point reads (Lakebase adds **6.3 ms** over the network baseline; the query itself runs in 0.07 ms) instead of 90-second dashboard queries. App writes go to Postgres and land back in Delta in about a minute.
 5. **Orchestrate and deploy.** One Lakeflow job runs the whole chain (generate, refresh, AI, score, sync, write-back merge, evaluate), and the whole thing is defined in a **Databricks Asset Bundle**. It deploys to dev or prod from Git with one command.
 
 **TELL: so what**
@@ -297,21 +299,21 @@ What would stop us from starting the week after next?
 | Genie is slow | "While that runs, notice it's querying governed tables, not a copy." | Talk through grounding; fall back to the standalone Genie tab |
 | Network drops | "Let me walk you through it from the run evidence." | Open README walkthrough and `evidence/` text |
 
-## Placeholders in this track
+## Measured numbers in this track
 
-| Placeholder | Where the number comes from |
+| Number | Source |
 |---|---|
-| `[[freshness]]` minutes | `evidence/freshness.md`: one increment timed from file landed to visible in the app |
-| `[[Jordan attainment ≈29%]]` | `gold_seller_kpis` after the R12 quota re-run (quota $500K/qtr; closed-won $146.4K in the last run); update `evidence/02_pipeline.md` |
-| `[[Jordan coverage ≈3.5x]]` | Same re-run. The committed evidence still shows 12.38x from before R12 |
-| `[[example deal P(close)]]` | `gold_deal_scores` for Jordan's top deal; app API response in `evidence/app.md` |
-| `[[AUC]]` | `evidence/score_eval.md` / `gold_score_eval` (MLflow run) |
-| `[[top-decile lift]]` | `evidence/score_eval.md` |
-| `[[write round-trip ms]]` | `evidence/lakebase.md`: Lakebase read/write round-trip log |
-| `[[Lakebase p95 read ms]]` | `evidence/lakebase.md`: timed app endpoint reads |
-| `[[Genie answer seconds]]` | `evidence/genie.md`: benchmark run timings |
-| `[[Genie benchmark x/N]]` | `evidence/genie.md`: ~10 scripted benchmark questions |
-| `[[job cost per run]]` | `evidence/job_cost.md`: `system.billing.usage` for the `seller_superapp_daily` run |
+| Freshness **9.0 min** (540.6 s), file landed → the Lakebase row the app reads | `evidence/10_e2e.md` |
+| Jordan FY27Q4: attainment **35.3%**, coverage **3.5×**, 18 open deals | `evidence/09_app.md` (`GET /api/home`) |
+| Morgan Lee (manager): 8 reps, 46 open deals | `evidence/09_app.md` |
+| Top deal P(close this quarter) **0.86** (Solis Construction) | `evidence/09_app.md` |
+| AUC **0.695**; top-decile lift **2.06×** (80% vs 38.75% base, 400 held-out closed deals) | `evidence/06_nba_and_eval.md` |
+| Competitor extraction P/R **1.00 / 1.00** (287 planted mentions) | `evidence/06_nba_and_eval.md` |
+| Write-back **59.1 s**, app write → Delta (CDC 16.2 s) | `evidence/07_lakebase.md` |
+| Lakebase **6.3 ms** added over network baseline (0.07 ms server-side) | `evidence/07_lakebase.md` |
+| Genie **9/10**, median **18.5 s** | `evidence/08_genie.md` |
+| Run cost **~1.65 DBU ≈ $1.15** per incremental run (≈ $10K/yr if hourly; estimate) | `docs/VALUE_MODEL.md` |
+| Tests: **184 passed, 1 failed, 1 skipped** (the failure found a real view-grant bug, fixed in code) | `evidence/11_tests.md` |
 
 ## Value arithmetic (assumptions, for reference)
 
@@ -320,5 +322,5 @@ What would stop us from starting the week after next?
 | Seat retirement | 600 sellers; add-on list price $75–$220/user/month, midpoint $150 | 600 × $150 × 12 | **$1.08M/yr** (range $0.54M–$1.58M) |
 | Seller time | 2 hrs/week saved; 46 working weeks; 2,000 hrs per FTE-year | 600 × 2 × 46 = 55,200 hrs; ÷ 2,000 | **~55K hrs/yr ≈ 27 FTE** of selling time |
 | Win rate (upside) | $600M/yr worked pipeline; +1 pt win rate | $600M × 0.01 | **~$6M ACV/yr** |
-| Platform run cost | Serverless pipeline + AI enrichment + Lakebase + app + Genie at full scale | assumption, replace with measured `[[job cost per run]]` × runs/yr + Lakebase + app | **~$150K–$250K/yr** |
-| Payback | Build and pilot effort assumption: 2 engineers × 12 weeks ≈ $150K | ($150K build + $200K run) vs $1.08M seat savings | **under 6 months on seats alone** |
+| Platform run cost | Serverless pipeline + AI enrichment + Lakebase + app + Genie at full scale | assumption at full scale; measured at demo scale ~$1.15 per incremental run (≈ $10K/yr hourly; estimate) | **~$150K–$250K/yr** |
+| Payback | Build and pilot effort assumption: 2 engineers × 12 weeks ≈ $150K | ($150K build + $200K run) vs $1.08M seat savings | **≈ 4 months on seats alone** (conservative ≈ 9 months) |
