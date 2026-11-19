@@ -8,9 +8,8 @@ The business-audience deck for the FE Bar submission (required artifact).
 | PDF export (submission copy) | `docs/deck/Fleetwise_Seller_Hub_Business_Case.pdf` |
 | Text version: full slide text + speaker notes | `docs/deck/DECK.md` |
 
-16 slides: 14 main slides plus 2 appendix slides (open measurements and sources; architecture detail).
+16 slides: 14 main slides plus 2 appendix slides (measurements and sources; architecture detail).
 Speaker notes on every slide point to the matching section of `docs/roleplay/TALK_TRACK.md` and the relevant `QA_PREP.md` items.
 
-Placeholders still open (`[[...]]`, listed on slide 15): freshness minutes, Lakebase p95 read ms, job cost per run, score AUC and top-decile lift,
-extraction precision/recall, Genie benchmark x/N. When an evidence file lands, update the Slides deck, re-export the PDF
-(Drive export, `application/pdf`) and update `DECK.md`.
+All numbers are filled from the committed evidence (`evidence/01`–`11`, `docs/VALUE_MODEL.md`); slide 15 lists each with its source.
+When a number changes, update the Slides deck, re-export the PDF (Drive export, `application/pdf`) and update `DECK.md`.

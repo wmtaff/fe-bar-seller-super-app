@@ -2,7 +2,7 @@
 
 Text-readable version of the business-audience deck: full slide text plus speaker notes. PDF: `docs/deck/Fleetwise_Seller_Hub_Business_Case.pdf`. Google Slides: see `docs/deck/README.md`.
 
-Fleetwise is a fictional fleet-telematics SaaS company (~600 sellers). All data is synthetic. Competitors named in the data (RoadLynx, FleetCore, Trackwell) are fictional. Values in `[[double brackets]]` are not measured yet; they are listed on slide 15.
+Fleetwise is a fictional fleet-telematics SaaS company (~600 sellers). All data is synthetic. Competitors named in the data (RoadLynx, FleetCore, Trackwell) are fictional. Measured values cite their evidence file in `evidence/`; slide 15 separates measured from assumed.
 
 Narrative, assumptions and arithmetic match `docs/roleplay/TALK_TRACK.md`, `QA_PREP.md` and `CHEAT_SHEET.md`.
 
@@ -65,7 +65,7 @@ Retire overlapping add-on seats, give sellers time back, and win more of the pip
 
 ## Slide 4. Monday for Jordan: one screen, a plan, and the evidence
 
-**Jordan Rivera, Enterprise AE  ·  FY27 Q4  ·  29.3% attainment  ·  3.5x coverage  ·  $1.24M open this quarter  (measured in the build)**
+**Jordan Rivera, Enterprise AE  ·  FY27 Q4  ·  35.3% attainment  ·  3.5× coverage  ·  18 open deals, $1.13M open pipeline  (measured in the build)**
 
 Jordan has enough pipeline. The problem is which deals to push.
 
@@ -78,7 +78,7 @@ Before: Jordan hears about RoadLynx and the P1 from the customer, in the meeting
 **Speaker notes:**
 
 > Talk track: 4:30 Segment 1 My Week, 7:00 Segment 2 Deal 360, 10:00 Segment 3 NBA write-back, 11:30 Segment 4 Ask Genie.  
-> Jordan's numbers are live from gold_seller_kpis (FY27Q4): quota $500K, closed-won $146.4K = 29.3%, coverage 3.5x.  
+> Jordan's numbers are live from gold_seller_kpis (FY27Q4; evidence/09_app.md): quota $500K, closed-won $176.7K = 35.3%, coverage 3.5×, 18 open deals.  
 > So what: ~10 seconds to know the three deals that matter (Lever 2 time) and it replaces the dashboard Jordan used to open (Lever 1 seats). The RoadLynx mention and P1 are the win-rate lever: better-prepared calls on the deals most likely to move.  
 
 ---
@@ -94,7 +94,7 @@ Before: Jordan hears about RoadLynx and the P1 from the customer, in the meeting
 
 **Speaker notes:**
 
-> Talk track: 13:30 Segment 5 Manager view (Morgan Lee) and 17:30 Close.  
+> Talk track: 13:30 Segment 5 Manager persona (switch to Morgan Lee: the manager sees the team's deals on My Week) and 17:30 Close.  
 > Exec framing lines: 'Your managers coach from evidence, and you get a forecast built on the same numbers your sellers see.' 'You get proof of adoption, not just logins.'  
 > Objections ready: QA B1 (why pay on top of Salesforce: instead of the add-ons, not on top), B2 (payback ≈ 4 months on seats alone), B13 (risk is capped).  
 
@@ -102,8 +102,8 @@ Before: Jordan hears about RoadLynx and the P1 from the customer, in the meeting
 
 ## Slide 6. For RevOps & Sales Systems: one governed app, not a tool stack
 
-- **Fewer tools.** Revenue intelligence, forecasting roll-ups and email drafting in one app: fewer seats, vendors and admin consoles to run.
-- **Fresh data.** One managed Lakeflow Connect path for every field, in minutes, not hours ([[freshness: evidence/freshness.md]]). No 2-hour batch, no live-API patch, no rate-limit fights.
+- **Fewer tools.** Revenue intelligence and forecasting inputs in one app: fewer seats, vendors and admin consoles to run. Roadmap: email drafting.
+- **Fresh data.** One managed Lakeflow Connect path for every field, in minutes, not hours (9.0 min measured from file landed to the Lakebase row the app reads; evidence/10_e2e.md). No 2-hour batch, no live-API patch, no rate-limit fights.
 - **Less backlog.** Ad-hoc questions go to Genie, which answers in plain English and shows its SQL, instead of becoming report tickets.
 - **Same visibility.** Seller → manager → RVP scoping enforced in the data layer; contact PII masked before it reaches the app. Parity with Salesforce sharing tested in the pilot.
 - **Measurable.** Every accept and dismiss flows back into the lakehouse: NBA adoption per rep and action type; score accuracy re-measured every cycle.
@@ -113,7 +113,7 @@ Before: Jordan hears about RoadLynx and the P1 from the customer, in the meeting
 
 > Talk track: 11:30 Segment 4 Ask Genie (report backlog), 10:00 Segment 3 write-back (adoption), 15:00 Segment 6 (governance).  
 > Objections ready: QA B7 (RevOps owns product, platform team owns pipelines), B3 (homegrown-app risk), T3 (Lakeflow Connect, read-only, same silver/gold), T4 (row-level parity with Salesforce sharing), T16 (freshness).  
-> Freshness number is a placeholder until evidence/freshness.md lands; if asked, say we time one increment end to end and it's a pilot criterion (≤ 15 min).  
+> Freshness is measured: 9.0 min (540.6 s) for one increment, file landed → the Lakebase row the app reads (evidence/10_e2e.md). The pilot criterion is ≤ 15 min.  
 
 ---
 
@@ -124,7 +124,7 @@ Before: Jordan hears about RoadLynx and the P1 from the customer, in the meeting
 | Seat retirement (hard) | 600 sellers; add-on list price $75–$220 / user / month, midpoint $150 | 600 × $150 × 12 | $0.54M / yr (at $75) | $1.08M/yr |
 | Seller time | 2 hrs / week saved; 46 working weeks; 2,000 hrs per FTE-year | 600 × 2 × 46 = 55,200 hrs; ÷ 2,000 | ~27.6K hrs ≈ 14 FTE (at 1 hr / week) | ~55K hrs ≈ 27 FTE |
 | Win rate (upside) | ~$600M / yr worked pipeline; +1 pt win rate | $600M × 0.01 | $0 (not banked) | ~$6M ACV/yr |
-| Platform run cost | Serverless pipeline, AI enrichment, Lakebase, app and Genie at full scale | Assumption; replace with measured [[job cost per run: evidence/job_cost.md]] × runs / yr | $250K / yr | ~$200K / yr (range $150K–$250K) |
+| Platform run cost | Serverless pipeline, AI enrichment, Lakebase, app and Genie at full scale | Assumption at full scale; measured at demo scale ~1.65 DBU ≈ $1.15 per incremental run (≈ $10K / yr if hourly; estimate, docs/VALUE_MODEL.md) | $250K / yr | ~$200K / yr (range $150K–$250K) |
 | Payback (seats only) | Build + pilot ≈ 2 engineers × 12 weeks ≈ $150K | ($150K + run) ÷ seat savings | ($150K + $250K) ÷ $0.54M ≈ 9 months | ($150K + $200K) ÷ $1.08M ≈ 4 months |
 
 Sensitivity: even in the conservative case, seat savings alone repay build plus first-year run inside year one; at the $220 list-price high end seats are $1.58M / yr. The pilot replaces each assumption: contract line items (seats), before / after survey plus app telemetry (time), NBA acceptance and win rate on scored deals (revenue).
@@ -152,17 +152,17 @@ Same entities through every layer: account  →  opportunity  →  transcript  �
 - **Intelligence (AI Functions + classifier):** AI reads every call; a classifier scores every deal with calibrated probabilities.
 - **Serve (Lakebase):** Millisecond pages for 600 sellers; seller actions saved instantly.
 - **Ask (Genie):** Plain-English answers that show their SQL.
-- **Act (Databricks App):** Fleetwise Seller Hub: My Week, Deal 360, Manager view.
+- **Act (Databricks App):** Fleetwise Seller Hub: My Week, Deal 360, Ask Genie; the manager persona sees the team's deals on My Week.
 
 Closed loop: every Accept / Dismiss is written to Lakebase, merged back into the lakehouse with lineage, and improves the next run's ranking.
 
-**Measured today: 15,000 opportunities and ~446K silver rows through the pipeline  ·  0 rows failed a data-quality check  ·  Lakebase reads [[Lakebase p95 read ms: evidence/lakebase.md]] p95 vs ~90 s dashboards**
+**Measured today: 15,000 opportunities and ~456K silver rows through the pipeline  ·  0 rows failed a data-quality check  ·  Lakebase adds 6.3 ms over the network baseline (0.07 ms server-side) vs ~90 s dashboards**
 
 **Speaker notes:**
 
 > Talk track: 15:00 Segment 6 Under the hood. Show Catalog Explorer lineage on gold_opportunity_pipeline.  
 > Key line: one connected journey on the same entities; nothing copied into a side database that drifts. Production Salesforce ingest switches to the Lakeflow Connect connector.  
-> Measured: 15,150 bronze → 15,000 unique silver opportunities; 445,769 silver rows; zero expectation failures (evidence/02_pipeline.md).  
+> Measured: 15,150 bronze → 15,000 unique silver opportunities; ~456K silver rows; zero expectation failures (evidence/02_pipeline.md). Lakebase: 6.3 ms added over the network baseline (evidence/07_lakebase.md).  
 > Exec framing: 'Your data team owns one platform, not five integrations. This is why it's not a homegrown science project.'  
 
 ---
@@ -183,16 +183,16 @@ Closed loop: every Accept / Dismiss is written to Lakebase, merged back into the
 
 **AI accuracy**
 
-- Deal score tested on held-out closed deals against hidden ground truth never fed to the model: AUC [[AUC: evidence/score_eval.md]], top-decile lift [[top-decile lift: evidence/score_eval.md]]
-- Call extraction spot-checked against planted signals: [[extraction precision/recall: evidence/call_insights.md]]
-- Genie benchmark [[Genie benchmark x/N: evidence/genie.md]]; every output shows its why or its SQL
+- Deal score tested on held-out closed deals against hidden ground truth never fed to the model: AUC 0.695, top-decile lift 2.06× (80% vs 38.75% base, 400 held-out closed deals; evidence/06_nba_and_eval.md)
+- Competitor extraction against planted signals: precision / recall 1.00 / 1.00 (287 planted mentions; evidence/06_nba_and_eval.md)
+- Genie benchmark 9/10 correct, median 18.5 s (evidence/08_genie.md); every output shows its why or its SQL
 
 
 **Speaker notes:**
 
 > Talk track: 7:00 Segment 2 (score accuracy), 11:30 Segment 4 (Genie runs as the signed-in user), 15:00 Segment 6 (governance).  
 > Objections ready: QA B9 (AI accuracy), B10 (data safety), T5 (synced tables don't carry UC row filters: pre-masked PII, app-scoped queries, Postgres RLS as hardening), T7 (evaluation and drift), T15 (Genie accuracy and guardrails).  
-> AUC, lift, extraction and Genie numbers are placeholders; if not filled, say 'we're measuring that, and it's a pilot success criterion'.  
+> AUC, lift and extraction are measured against the generator's planted truth, not real-world accuracy: 'the pipeline works against known answers; the pilot re-measures on your closed deals'.  
 
 ---
 
@@ -218,7 +218,7 @@ Closed loop: every Accept / Dismiss is written to Lakebase, merged back into the
 
 | Risk | Mitigation | How the pilot proves it |
 |---|---|---|
-| Run cost grows | Serverless and incremental; scoring with a zero-output-token classifier; cost per run tracked in system billing tables | Measured [[job cost per run: evidence/job_cost.md]] scaled to 600 sellers |
+| Run cost grows | Serverless and incremental; scoring with a zero-output-token classifier; cost per run tracked in system billing tables | Measured ~$1.15 per incremental run at demo scale (estimate, docs/VALUE_MODEL.md), re-measured for 600 sellers |
 | Sellers don't adopt | Built around the question sellers already ask (“where do I spend my week?”); one-click actions; adoption visible per rep | ≥ 70% weekly active; ≥ 30% of actions accepted |
 | Homegrown-app risk | Thin app on managed services; one bundle in Git with tests in CI; RevOps owns product, platform team owns pipelines | Handover to the Fleetwise team inside the pilot |
 | Salesforce coexistence | Salesforce stays the system of record; read-only connected app; retire the add-ons, not Sales Cloud | Sharing-parity test; zero scoping violations in a red-team test |
@@ -268,7 +268,7 @@ Closed loop: every Accept / Dismiss is written to Lakebase, merged back into the
 **Speaker notes:**
 
 > Talk track: 17:30 Close, success criteria table (verbatim).  
-> Each criterion maps to an assumption or a placeholder: prep time → Lever 2; NBA acceptance and score AUC → Lever 3; seat list → Lever 1; freshness, latency, Genie → the technical placeholders.  
+> Each criterion maps to an assumption or a placeholder: prep time → Lever 2; NBA acceptance and score AUC → Lever 3; seat list → Lever 1; freshness, latency, Genie → the technical numbers measured in the build (slide 15).  
 
 ---
 
@@ -288,30 +288,31 @@ Closed loop: every Accept / Dismiss is written to Lakebase, merged back into the
 
 ---
 
-## Slide 15. Appendix A: open measurements and sources
+## Slide 15. Appendix A: measurements and sources
 
-| Placeholder (not yet measured) | Source when measured | Used on slide |
-|---|---|---|
-| [[freshness]] minutes | evidence/freshness.md (one increment, file landed → visible in app) | 6 |
-| [[Lakebase p95 read ms]] | evidence/lakebase.md (timed app endpoint reads) | 8 |
-| [[job cost per run]] | evidence/job_cost.md (system.billing.usage for the daily job) | 7, 11 |
-| [[AUC]] and [[top-decile lift]] | evidence/score_eval.md (held-out closed deals, MLflow run) | 9 |
-| [[extraction precision/recall]] | evidence/call_insights.md (~20-transcript spot-check) | 9 |
-| [[Genie benchmark x/N]] | evidence/genie.md (~10 scripted benchmark questions) | 9 |
+| Measured in the build | Value | Source | Used on slide |
+|---|---|---|---|
+| Freshness, file landed → Lakebase row the app reads | 9.0 min (540.6 s) | evidence/10_e2e.md | 6 |
+| Lakebase lookup latency | 6.3 ms added over network baseline (0.07 ms server-side) | evidence/07_lakebase.md | 8 |
+| Write-back, app write → Delta | 59.1 s round trip (CDC 16.2 s) | evidence/07_lakebase.md | 8 |
+| Run cost | ~1.65 DBU ≈ $1.15 per incremental run (≈ $10K / yr if hourly; estimate) | docs/VALUE_MODEL.md | 7, 11 |
+| Deal score AUC and top-decile lift | 0.695 and 2.06× (400 held-out closed deals) | evidence/06_nba_and_eval.md | 9 |
+| Competitor extraction precision / recall | 1.00 / 1.00 (287 planted mentions) | evidence/06_nba_and_eval.md | 9 |
+| Genie benchmark | 9/10, median 18.5 s | evidence/08_genie.md | 9 |
 
-Measured today: Jordan Rivera FY27 Q4 29.3% attainment, 3.5x coverage, $1.24M open (gold_seller_kpis, evidence/02_pipeline.md); 15,000 opportunities, 445,769 silver rows, 0 expectation failures (evidence/02_pipeline.md). Value assumptions: public list-price ranges and the talk-track value arithmetic; no engagement figures. All data synthetic; Fleetwise and competitors (RoadLynx, FleetCore, Trackwell) are fictional.
+Also measured: Jordan Rivera FY27 Q4 35.3% attainment, 3.5× coverage, 18 open deals (gold_seller_kpis, evidence/09_app.md); 15,000 opportunities, ~456K silver rows, 0 expectation failures (evidence/02_pipeline.md). Value assumptions: public list-price ranges and the talk-track value arithmetic; no engagement figures. All data synthetic; Fleetwise and competitors (RoadLynx, FleetCore, Trackwell) are fictional.
 
 **Speaker notes:**
 
 > Use if the evaluator or architect asks 'what is measured vs assumed?' (QA Part 4: separate measured from assumed).  
-> Swap each placeholder for its number as the evidence files land; otherwise say 'we're measuring that in the pilot'.  
+> Every number above is from a committed evidence file; the value levers stay assumptions until the pilot measures them.  
 
 ---
 
 ## Slide 16. Appendix B: architecture detail for the platform team
 
 - **Ingest:** Lakeflow Spark Declarative Pipeline. Auto Loader reads Salesforce-shaped exports, Meet JSON, usage and tickets from a UC volume → bronze → silver (AUTO CDC SCD1 on LastModifiedDate; expectations drop bad keys and dates) → gold. Production: the Lakeflow Connect Salesforce connector, same schemas.
-- **Measured:** 15,150 bronze → 15,000 unique silver opportunities; 0 expectation failures; 11 integration and 27 unit tests passing.
+- **Measured:** 15,150 bronze → 15,000 unique silver opportunities; 0 expectation failures. Full test suite: 184 passed, 1 failed (it found a real view-grant bug, fixed in code), 1 skipped (evidence/11_tests.md).
 - **Govern:** Comments on every table and column; pii tag and column masks on contact email and phone; row filter on the seller → manager → RVP hierarchy; lineage from volume to app tables.
 - **Intelligence:** ai_query (Claude, strict JSON schema) → gold_call_insights. OpenJev classifier (calibrated probabilities, zero output tokens) → gold_deal_scores. gold_next_best_actions ranked by ACV × P(close) × urgency. Evaluation logged to MLflow.
 - **Serve:** Lakebase Postgres synced tables from UC (change data feed): account_360, opportunity_pipeline, next_best_actions, call_insights, seller_kpis. Contacts sync from a pre-masked view. The app writes only to native app.* tables.
